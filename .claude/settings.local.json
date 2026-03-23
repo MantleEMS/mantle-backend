@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \":*)",
+      "Bash(venv/bin/pip install:*)",
+      "Bash(venv/bin/pytest tests/unit -x)",
+      "Bash(venv/bin/pytest tests/unit)",
+      "Bash(venv/bin/pytest tests/unit -q)",
+      "Bash(venv/bin/pytest -m integration -q)",
+      "Bash(docker compose:*)",
+      "Bash(source venv/bin/activate)",
+      "Bash(pip show:*)",
+      "Bash(python -m pytest -m integration -q --tb=short)",
+      "Bash(pip install:*)",
+      "Bash(python -m pytest -m \"not integration\" -q --tb=short)",
+      "Bash(find /Users/razaali/Documents/Projects/mantle-ems -maxdepth 2 \\\\\\(-name docker-compose* -o -name Dockerfile -o -name .env* -o -name logging.yaml -o -name logging.yml -o -name logging.ini \\\\\\))",
+      "Bash(docker-compose run:*)",
+      "Bash(venv/bin/pytest)",
+      "Bash(venv/bin/pytest -m integration)",
+      "Bash(venv/bin/pytest tests/integration/test_services.py::test_start_session_writes_audit -v)",
+      "Bash(venv/bin/pytest tests/integration/test_services.py::test_start_session_writes_audit -v --tb=long)",
+      "Bash(venv/bin/pytest -m integration tests/integration/test_services.py::test_start_session_writes_audit --tb=long)",
+      "Bash(venv/bin/pytest -m integration --tb=long)",
+      "Bash(venv/bin/pytest -m integration --tb=short)",
+      "Bash(venv/bin/pytest -m integration tests/integration/test_api.py::test_list_incidents tests/integration/test_api.py::test_resolve_incident --tb=long)",
+      "Bash(venv/bin/pip uninstall:*)",
+      "Bash(system_profiler SPHardwareDataType SPMemoryDataType)",
+      "Bash(system_profiler SPDisplaysDataType)",
+      "Bash(ollama list:*)",
+      "Bash(ollama show:*)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\(''''details'''',''''''''\\)\\)\")",
+      "Bash(curl -s https://ollama.com/library/qwen3-coder)",
+      "Bash(curl -s https://ollama.com/library/qwen3-coder:30b)",
+      "Bash(ollama pull:*)",
+      "Bash(python -m pytest tests/unit/test_agent_system_prompt.py tests/unit/test_agent_llm_client.py tests/unit/test_agent_llm_agent.py -v --tb=short)",
+      "Bash(python -m pytest tests/unit/test_agent_system_prompt.py tests/unit/test_agent_llm_client.py tests/unit/test_agent_llm_agent.py -v --tb=short --no-header)",
+      "Bash(python -m pytest tests/e2e/ --collect-only --no-header -q)",
+      "Bash(python -m pytest tests/e2e/ -m e2e --collect-only --no-header -q)",
+      "Bash(venv/bin/pytest -m e2e --collect-only --no-header -q)"
+    ]
+  }
+}
