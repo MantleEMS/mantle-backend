@@ -11,8 +11,8 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      TEST_DATABASE_URL: postgresql+asyncpg://mantle:mantle_secret@postgres:5432/mantle_ems_test
-      TEST_ADMIN_DATABASE_URL: postgresql+asyncpg://mantle:mantle_secret@postgres:5432/mantle_ems
+      DATABASE_URL: postgresql+asyncpg://mantle:mantle_secret@postgres:5432/mantle_ems
+      REDIS_URL: redis://redis:6379/0
     volumes:
       - ./backend:/app
       - ./backend/data/uploads:/app/uploads
