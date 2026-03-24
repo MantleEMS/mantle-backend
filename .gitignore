@@ -9,3 +9,4 @@ backend/.env
 *.docx
 .claude/
 .vscode/
+*.*tools
