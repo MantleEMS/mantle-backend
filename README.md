@@ -187,6 +187,31 @@ alembic upgrade head
 
 ---
 
+## Demo Credentials
+
+### Platform
+
+| Email | Password | Role | Scope |
+|---|---|---|---|
+| `admin@mantle.system` | `superadmin123` | `super_admin` | All organizations |
+
+### Sunrise Home Health (org: `sunrise`)
+
+| Email | Password | Role |
+|---|---|---|
+| `orgadmin@sunrise.demo` | `password123` | `org_admin` |
+| `torres@sunrise.demo` | `password123` | `commander` |
+| `dpark@sunrise.demo` | `password123` | `supervisor` |
+| `maria@sunrise.demo` | `password123` | `worker` |
+| `sarah@sunrise.demo` | `password123` | `worker` |
+| `williams@sunrise.demo` | `password123` | `worker` |
+| `park@sunrise.demo` | `password123` | `worker` |
+| `lee@sunrise.demo` | `password123` | `worker` |
+
+Login via `POST /api/v1/auth/login` with `{ "email": "...", "password": "..." }`.
+
+---
+
 ## API Endpoints
 
 | Method | Path | Description |
