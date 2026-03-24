@@ -15,11 +15,29 @@ from app.database import AsyncSessionLocal
 logger = logging.getLogger(__name__)
 
 DEFAULT_PASSWORD = "password123"
+SUPER_ADMIN_EMAIL = "admin@mantle.system"
 
 
 async def run_seed():
     async with AsyncSessionLocal() as db:
-        # Check if already seeded
+        # Ensure super_admin exists (idempotent, runs every time)
+        sa_result = await db.execute(select(User).where(User.email == SUPER_ADMIN_EMAIL))
+        if not sa_result.scalar_one_or_none():
+            super_admin = User(
+                org_id=None,
+                email=SUPER_ADMIN_EMAIL,
+                password_hash=hash_password("superadmin123"),
+                name="Platform Super Admin",
+                role="super_admin",
+                status="active",
+                qualifications=[],
+                medical_flags=[],
+            )
+            db.add(super_admin)
+            await db.flush()
+            logger.info(f"Super admin created: {SUPER_ADMIN_EMAIL}")
+
+        # Check if Sunrise org already seeded
         result = await db.execute(select(Organization).where(Organization.slug == "sunrise"))
         if result.scalar_one_or_none():
             logger.info("Seed data already present — skipping")
@@ -168,6 +186,17 @@ async def run_seed():
                 role="supervisor",
                 status="active",
                 qualifications=["auditor"],
+                medical_flags=[],
+            ),
+            User(
+                org_id=org.id,
+                email="orgadmin@sunrise.demo",
+                password_hash=hash_password(DEFAULT_PASSWORD),
+                name="Sunrise Org Admin",
+                phone="512-555-0100",
+                role="org_admin",
+                status="active",
+                qualifications=[],
                 medical_flags=[],
             ),
         ]
@@ -400,8 +429,9 @@ async def run_seed():
             f"Seed complete: org={org.id}, "
             f"facilities=2, users={len(users)}, sops=2"
         )
-        logger.info(f"Demo logins — password for all: '{DEFAULT_PASSWORD}'")
-        logger.info("  maria@sunrise.demo (worker/on_duty)")
+        logger.info(f"Demo logins — password for all org users: '{DEFAULT_PASSWORD}'")
+        logger.info(f"  {SUPER_ADMIN_EMAIL} (super_admin) password: superadmin123")
+        logger.info("  orgadmin@sunrise.demo (org_admin)")
         logger.info("  torres@sunrise.demo (commander/on_duty)")
-        logger.info("  sarah@sunrise.demo (worker/on_duty)")
         logger.info("  dpark@sunrise.demo (supervisor)")
+        logger.info("  maria@sunrise.demo (worker/on_duty)")

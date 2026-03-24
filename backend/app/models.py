@@ -51,12 +51,12 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=True)
     email = Column(String(255), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     name = Column(String(255), nullable=False)
     phone = Column(String(50))
-    # role: admin, commander, worker, responder, supervisor
+    # role: super_admin, org_admin, admin, commander, worker, responder, supervisor
     role = Column(String(30), nullable=False, default="worker")
     # status: active, on_duty, off_duty, inactive
     status = Column(String(30), nullable=False, default="active")

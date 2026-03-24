@@ -1,46 +1,191 @@
-21:25:14 INFO app.agent.router — LLM agent ready: provider=anthropic model=claude-haiku-4-5-20251001
-21:25:15 INFO app.services.incident_service — Incident INC-2026-0001 created: id=0505b950-54d8-47d2-a3ee-18b2b4645f6e, type=medical, org=0d7aba44-6bf9-4370-9848-ac0bfb4e3643, commander=assigned, sop=assigned
-21:25:15 INFO app.agent.llm_agent — [0505b950-54d8-47d2-a3ee-18b2b4645f6e] LLM agent starting emergency=medical sop='Medical Emergency SOP' model=claude-haiku-4-5-20251001 provider=anthropic
-21:25:18 INFO httpx — HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
-21:25:18 INFO app.agent.llm_client — llm_client iter=1 provider=anthropic call_ms=3125 tool_calls=['start_evidence_collection', 'alert_commander', 'get_incident_details', 'get_facility_info', 'get_patient_info']
-21:25:18 INFO app.agent.llm_client — llm_client tool=start_evidence_collection params={'incident_id': '0505b950-54d8-47d2-a3ee-18b2b4645f6e', 'media_types': ['audio', 'gps']} result='{"status": "started", "media_types": ["audio", "gps"]}'
-21:25:18 INFO app.agent.llm_client — llm_client tool=alert_commander params={'incident_id': '0505b950-54d8-47d2-a3ee-18b2b4645f6e', 'commander_id': '8572d907-48b3-4b0c-9263-45c45ed3b6cf', 'priority': 'critical'} result='{"status": "alerted", "commander_id": "8572d907-48b3-4b0c-9263-45c45ed3b6cf", "priority": "critical"}'
-21:25:18 INFO app.agent.llm_client — llm_client tool=get_incident_details params={'incident_id': '0505b950-54d8-47d2-a3ee-18b2b4645f6e'} result='{"id": "0505b950-54d8-47d2-a3ee-18b2b4645f6e", "incident_number": "INC-2026-0001", "status": "active", "emergency_type": "medical", "trigger_source": "panic_button", "severity": 3, "facility_id": "1f7'
-21:25:18 INFO app.agent.llm_client — llm_client tool=get_facility_info params={'facility_id': '1f7edc67-57f2-4b41-9e57-5fd445ec9863'} result='{"id": "1f7edc67-57f2-4b41-9e57-5fd445ec9863", "name": "Patient Home", "facility_type": "patient_home", "address": {"city": "Austin", "street": "123 Maple St"}, "risk_flags": ["stairs"], "cell_coverag'
-21:25:18 INFO app.agent.llm_client — llm_client tool=get_patient_info params={'facility_id': '1f7edc67-57f2-4b41-9e57-5fd445ec9863'} result='{"patient_info": {"dob": "1938-04-12", "name": "Margaret Collins", "allergies": ["penicillin", "sulfa"], "conditions": ["diabetes", "hypertension", "DNR"], "medications": ["metformin", "lisinopril", "'
-21:25:22 INFO httpx — HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
-21:25:22 INFO app.agent.llm_client — llm_client iter=2 provider=anthropic call_ms=3482 tool_calls=['post_thread_message', 'post_thread_message', 'post_thread_message']
-21:25:22 INFO app.agent.llm_client — llm_client tool=post_thread_message params={'incident_id': '0505b950-54d8-47d2-a3ee-18b2b4645f6e', 'message_type': 'system_event', 'content': '🔴 MEDICAL EMERGENCY ACTIVATED | Panic button triggered at Patient Home (123 Maple St, Austin). Audio and GPS recording started. Commander alerted.'} result='{"status": "posted", "message_id": "2debc27f-c0a8-42ea-9f27-489217cb14e6", "seq": 4}'
-21:25:22 INFO app.agent.llm_client — llm_client tool=post_thread_message params={'incident_id': '0505b950-54d8-47d2-a3ee-18b2b4645f6e', 'message_type': 'status_update', 'content': 'PATIENT: Margaret Collins (DOB 4/12/1938) | CONDITIONS: Diabetes, Hypertension, DNR on file | ALLERGIES: Penicillin, Sulfa | MEDICATIONS: Metformin, Lisinopril, Aspirin | EMERGENCY CONTACT: Robert Collins (son) +1-512-555-0192'} result='{"status": "posted", "message_id": "5f247ee6-2a0d-4997-9002-50b8c9f01cb0", "seq": 5}'
-21:25:22 INFO app.agent.llm_client — llm_client tool=post_thread_message params={'incident_id': '0505b950-54d8-47d2-a3ee-18b2b4645f6e', 'message_type': 'status_update', 'content': "FACILITY: Patient Home, 123 Maple St, Austin | NEAREST HOSPITAL: St. Mary's General (3.2 km away) | CELL COVERAGE: Poor | RISK FLAGS: Stairs present"} result='{"status": "posted", "message_id": "af6d5f7e-d123-4c58-9701-a34ace83745e", "seq": 6}'
-21:25:25 INFO httpx — HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
-21:25:25 INFO app.agent.llm_client — llm_client iter=3 provider=anthropic call_ms=3195 tool_calls=['create_pending_action', 'create_pending_action']
-21:25:25 INFO app.services.action_service — Action 71b11733-7f9c-4277-b9aa-cc67da60a30b created: type=dispatch_responder, tier=amber, incident=0505b950-54d8-47d2-a3ee-18b2b4645f6e
-21:25:25 INFO app.services.action_service — Action ba633bdb-bc72-4deb-8c57-957c1257c064 created: type=contact_911, tier=red, incident=0505b950-54d8-47d2-a3ee-18b2b4645f6e
-21:25:25 INFO app.agent.llm_client — llm_client tool=create_pending_action params={'incident_id': '0505b950-54d8-47d2-a3ee-18b2b4645f6e', 'tier': 'red', 'action_type': 'contact_911', 'description': 'Call 911 for medical emergency. Patient Margaret Collins (87 years old) with diabetes, hypertension, and DNR on file. Panic button activated at home. ⚠️ NOTE: DNR status on file—ensure 911 dispatcher is informed.'} result='{"status": "pending", "action_id": "ba633bdb-bc72-4deb-8c57-957c1257c064", "tier": "red", "action_type": "contact_911", "description": "Call 911 for medical emergency. Patient Margaret Collins (87 yea'
-21:25:25 INFO app.agent.llm_client — llm_client tool=create_pending_action params={'incident_id': '0505b950-54d8-47d2-a3ee-18b2b4645f6e', 'tier': 'amber', 'action_type': 'dispatch_responder', 'description': 'Dispatch nearest qualified responder (RN or CPR-certified) to Patient Home, 123 Maple St, Austin. Poor cell coverage and stairs present. Responder should confirm patient breathing and pulse per checklist.'} result='{"status": "pending", "action_id": "71b11733-7f9c-4277-b9aa-cc67da60a30b", "tier": "amber", "action_type": "dispatch_responder", "description": "Dispatch nearest qualified responder (RN or CPR-certifi'
-21:25:27 INFO httpx — HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
-21:25:27 INFO app.agent.llm_client — llm_client iter=4 provider=anthropic call_ms=1924 tool_calls=['post_thread_message']
-21:25:27 INFO app.agent.llm_client — llm_client tool=post_thread_message params={'incident_id': '0505b950-54d8-47d2-a3ee-18b2b4645f6e', 'message_type': 'action', 'content': '✋ PENDING COMMANDER DECISIONS: (1) RED-TIER: Contact 911 for medical emergency [DNR on file]. (2) AMBER-TIER: Dispatch nearest RN/CPR-certified responder. Awaiting approval.'} result='{"status": "posted", "message_id": "db1360aa-79fc-45a9-8583-93524d881331", "seq": 7}'
-21:25:32 INFO httpx — HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
-21:25:32 INFO app.agent.llm_client — llm_client iter=5 provider=anthropic call_ms=4806 tool_calls=none
-21:25:32 INFO app.agent.llm_client — llm_client done iter=5 output='---\n\n## SOP Execution Summary\n\n**✅ COMPLETED (Green-Tier Automatic Actions):**\n- **Step 1:** Audio and GPS recording started\n- **Step 2:** Commander alerted (critical priority)\n\n**📋 PENDING COMMANDER '
-21:25:32 INFO app.agent.llm_agent — [0505b950-54d8-47d2-a3ee-18b2b4645f6e] LLM agent finished success=True iterations=5 tool_calls=11 output='---\n\n## SOP Execution Summary\n\n**✅ COMPLETED (Green-Tier Automatic Actions):**\n- **Step 1:** Audio and GPS recording started\n- **Step 2:** Commander alerted (critical priority)\n\n**📋 PENDING COMMANDER '
-21:25:32 INFO app.services.incident_service — Incident INC-2026-0002 created: id=fe962992-e832-488c-b83a-9924e57780d0, type=workplace_violence, org=07f15499-011a-4cee-aa0e-6c684accddf0, commander=assigned, sop=assigned
-21:25:32 INFO app.agent.llm_agent — [fe962992-e832-488c-b83a-9924e57780d0] LLM agent starting emergency=workplace_violence sop='Workplace Violence SOP' model=claude-haiku-4-5-20251001 provider=anthropic
-21:25:34 INFO httpx — HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
-21:25:34 INFO app.agent.llm_client — llm_client iter=1 provider=anthropic call_ms=2079 tool_calls=['start_evidence_collection', 'post_thread_message']
-21:25:34 INFO app.agent.llm_client — llm_client tool=start_evidence_collection params={'incident_id': 'fe962992-e832-488c-b83a-9924e57780d0', 'media_types': ['audio', 'gps']} result='{"status": "started", "media_types": ["audio", "gps"]}'
-21:25:34 INFO app.agent.llm_client — llm_client tool=post_thread_message params={'incident_id': 'fe962992-e832-488c-b83a-9924e57780d0', 'message_type': 'system_event', 'content': '🔴 WORKPLACE VIOLENCE INCIDENT TRIGGERED. Audio and GPS recording started. Incident commander being alerted.'} result='{"status": "posted", "message_id": "8fd511f0-9cb1-41dd-a80b-dc932d46283b", "seq": 3}'
-21:25:36 INFO httpx — HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
-21:25:36 INFO app.agent.llm_client — llm_client iter=2 provider=anthropic call_ms=1436 tool_calls=['alert_commander']
-21:25:36 INFO app.agent.llm_client — llm_client tool=alert_commander params={'incident_id': 'fe962992-e832-488c-b83a-9924e57780d0', 'commander_id': 'd46927d4-533e-4eed-9e83-ea5a39c6a2e4', 'priority': 'critical'} result='{"status": "alerted", "commander_id": "d46927d4-533e-4eed-9e83-ea5a39c6a2e4", "priority": "critical"}'
-21:25:38 INFO httpx — HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
-21:25:38 INFO app.agent.llm_client — llm_client iter=3 provider=anthropic call_ms=2838 tool_calls=['create_pending_action', 'post_thread_message']
-21:25:38 INFO app.services.action_service — Action 177ed41a-ebba-4a2e-9a71-f9d41b7b5b35 created: type=contact_911, tier=red, incident=fe962992-e832-488c-b83a-9924e57780d0
-21:25:38 INFO app.agent.llm_client — llm_client tool=create_pending_action params={'incident_id': 'fe962992-e832-488c-b83a-9924e57780d0', 'tier': 'red', 'action_type': 'contact_911', 'description': 'Call 911 to report workplace violence threat/assault. Panic button triggered at facility 2d47a7b9-c839-46ad-8f8a-b4920a0d1da9. Audio and GPS recording in progress.'} result='{"status": "pending", "action_id": "177ed41a-ebba-4a2e-9a71-f9d41b7b5b35", "tier": "red", "action_type": "contact_911", "description": "Call 911 to report workplace violence threat/assault. Panic butt'
-21:25:38 INFO app.agent.llm_client — llm_client tool=post_thread_message params={'incident_id': 'fe962992-e832-488c-b83a-9924e57780d0', 'message_type': 'action', 'content': '⏳ PENDING COMMANDER DECISION: 911 contact authorization. Awaiting approval to call emergency services and report threat/assault.'} result='{"status": "posted", "message_id": "157a6873-b1b3-4f4c-bf65-64af391b3fc2", "seq": 5}'
-21:25:41 INFO httpx — HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
-21:25:41 INFO app.agent.llm_client — llm_client iter=4 provider=anthropic call_ms=2555 tool_calls=none
-21:25:41 INFO app.agent.llm_client — llm_client done iter=4 output='---\n\n## Summary\n\n**SOP Execution Status:**\n\n| Step | Action | Tier | Status |\n|------|--------|------|--------|\n| 1 | Begin recording (audio + GPS) | Green | ✅ **COMPLETE** |\n| 2 | Alert incident comm'
-21:25:41 INFO app.agent.llm_agent — [fe962992-e832-488c-b83a-9924e57780d0] LLM agent finished success=True iterations=4 tool_calls=5 output='---\n\n## Summary\n\n**SOP Execution Status:**\n\n| Step | Action | Tier | Status |\n|------|--------|------|--------|\n| 1 | Begin recording (audio + GPS) | Green | ✅ **COMPLETE** |\n| 2 | Alert incident comm'
+23:28:46 INFO app.agent.router — LLM agent ready: provider=anthropic model=claude-haiku-4-5-20251001
+23:28:49 INFO app.services.incident_service — Incident INC-2026-0001 created: id=8293060b-4882-434b-8a34-51874e942ef2, type=medical, org=1079999d-0cc0-4c14-9dad-c180709d9c72, commander=assigned, sop=assigned
+23:28:49 INFO app.services.incident_service — Incident INC-2026-0002 created: id=38fa1a67-237f-4699-8fdc-c95ca8be43c0, type=workplace_violence, org=f65a6707-8d50-4c1f-abb4-0d4e5c5b14ba, commander=assigned, sop=assigned
+23:28:49 INFO app.services.incident_service — Incident INC-2026-0003 created: id=e46cceee-1f70-46e9-b28c-d6f184803ff1, type=medical, org=2208518c-28cb-4215-8478-3efa0c694993, commander=assigned, sop=assigned
+23:28:50 INFO app.services.incident_service — Incident INC-2026-0004 created: id=5628b951-f945-4b70-92f0-ea54e75499c7, type=workplace_violence, org=04bc916d-f4be-41bb-a624-abf09e076c21, commander=assigned, sop=assigned
+23:28:50 INFO app.services.incident_service — Incident INC-2026-0005 created: id=fbe3592d-f684-4f6a-9d1c-0b67cbc178b2, type=medical, org=2e5bf21a-c613-4d72-9fb2-a45b98370c02, commander=assigned, sop=assigned
+23:28:51 INFO app.services.incident_service — Incident INC-2026-0006 created: id=081e729a-99a7-4342-be8d-138ecd5c675a, type=workplace_violence, org=efb2fcbf-760d-407a-a5f2-b7a5ec20e2d3, commander=assigned, sop=assigned
+23:28:51 INFO app.services.action_service — Action a579040b-e995-4790-84df-514fec74616f created: type=dispatch_responder, tier=red, incident=081e729a-99a7-4342-be8d-138ecd5c675a
+23:28:51 INFO app.services.incident_service — Incident INC-2026-0007 created: id=6798e14a-3950-4015-8ea9-44ca129de45d, type=workplace_violence, org=aeec0aec-3397-4883-adc8-d288957dc546, commander=assigned, sop=assigned
+23:28:51 INFO app.services.incident_service — Incident INC-2026-0008 created: id=33ab7c8b-c369-4c10-96b0-669dd5600da7, type=medical, org=fb667a08-d576-444d-8262-1b05c8e14495, commander=assigned, sop=assigned
+23:28:51 INFO app.services.action_service — Action 428ecb00-9b38-4acb-abd9-f20ce3960525 created: type=sop_adaptation, tier=amber, incident=33ab7c8b-c369-4c10-96b0-669dd5600da7
+23:28:51 INFO app.tools.adaptive_tools — [33ab7c8b-c369-4c10-96b0-669dd5600da7] adaptive: step=2 type=skip reason='Patient has DNR order on file'
+23:28:52 INFO app.services.incident_service — Incident INC-2026-0009 created: id=2c8dc58d-11ab-40d2-8b1d-8af0a9d081a8, type=medical, org=ac07e540-78ff-4b41-8736-a3c3dea4f566, commander=assigned, sop=assigned
+23:28:52 INFO app.services.action_service — Action 76385671-19ef-4e59-a8bb-19db7116dfbf created: type=sop_adaptation, tier=amber, incident=2c8dc58d-11ab-40d2-8b1d-8af0a9d081a8
+23:28:52 INFO app.tools.adaptive_tools — [2c8dc58d-11ab-40d2-8b1d-8af0a9d081a8] adaptive: step=1 type=modify reason='Poor cell coverage at facility — GPS unreliable'
+23:28:52 INFO app.services.incident_service — Incident INC-2026-0010 created: id=80331329-abad-4ce6-829f-30411e505bcc, type=medical, org=efe361d9-0d5f-490f-b2f2-db090028be9b, commander=assigned, sop=assigned
+23:28:52 INFO app.services.action_service — Action 37bf6372-c8f9-4d46-9b6f-ae9dec6214aa created: type=sop_adaptation, tier=amber, incident=80331329-abad-4ce6-829f-30411e505bcc
+23:28:52 INFO app.tools.adaptive_tools — [80331329-abad-4ce6-829f-30411e505bcc] adaptive: step=3 type=add_after reason='Patient on anticoagulants — bleeding risk requires extra step'
+23:28:53 INFO app.services.incident_service — Incident INC-2026-0011 created: id=e2c037cc-46ba-4ea4-9c35-d0a4b687e810, type=medical, org=019aa9b3-5f43-4ac4-bcdc-9e8eb3ff7f64, commander=assigned, sop=assigned
+23:28:53 INFO app.services.action_service — Action ac4935d2-05a9-44c0-b145-4e1df41068f0 created: type=sop_switch, tier=amber, incident=e2c037cc-46ba-4ea4-9c35-d0a4b687e810
+23:28:53 INFO app.tools.adaptive_tools — [e2c037cc-46ba-4ea4-9c35-d0a4b687e810] adaptive: sop_switch SOP-MED-TEST→SOP-WV-TEST reason='Panic button triggered during home visit — worker reports aggressor on-site'
+23:28:53 INFO app.services.incident_service — Incident INC-2026-0012 created: id=c3dc80ba-4cd6-4590-9048-1b030b6d9eb4, type=medical, org=6ff178f8-3d90-42f8-88ed-8b1de212724f, commander=assigned, sop=assigned
+23:28:53 INFO app.services.action_service — Action da002657-cb6a-4e2c-aafc-040260b484fe created: type=sop_switch, tier=amber, incident=c3dc80ba-4cd6-4590-9048-1b030b6d9eb4
+23:28:53 INFO app.tools.adaptive_tools — [c3dc80ba-4cd6-4590-9048-1b030b6d9eb4] adaptive: sop_switch SOP-MED-TEST→SOP-NONEXISTENT reason='test reason'
+23:28:53 INFO app.services.incident_service — Incident INC-2026-0013 created: id=594a6f84-7191-4136-b3f6-b8e0885b5d4e, type=medical, org=d5845233-d3dc-4885-9162-7313fa2f85be, commander=assigned, sop=assigned
+23:28:53 INFO app.services.action_service — Action 3f6753d9-4f46-440f-93c4-5584b3ca2f23 created: type=sop_switch, tier=amber, incident=594a6f84-7191-4136-b3f6-b8e0885b5d4e
+23:28:53 INFO app.tools.adaptive_tools — [594a6f84-7191-4136-b3f6-b8e0885b5d4e] adaptive: sop_switch SOP-MED-TEST→SOP-WV-TEST reason='Context suggests violence not medical emergency'
+23:28:54 INFO httpx — HTTP Request: GET http://test/health "HTTP/1.1 200 OK"
+23:28:54 INFO app.routers.auth — User 02dbdf59-1b6b-4f9d-92c7-395b479e7524 logged in [role=worker, org=3bdacfc3-cca3-4b67-abb9-b9c68e2c69fb]
+23:28:54 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:28:55 WARNING app.services.auth_service — Authentication failed: wrong password for user 970113d9-2e40-4b29-aca9-fe7ff6ab0d50
+23:28:55 WARNING app.routers.auth — Failed login attempt for email='worker-56ee94@test.com'
+23:28:55 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 401 Unauthorized"
+23:28:55 WARNING app.services.auth_service — Authentication failed: no account for email='nobody@test.com'
+23:28:55 WARNING app.routers.auth — Failed login attempt for email='nobody@test.com'
+23:28:55 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 401 Unauthorized"
+23:28:55 INFO httpx — HTTP Request: GET http://test/api/v1/incidents "HTTP/1.1 403 Forbidden"
+23:28:55 INFO app.routers.auth — User 696ee05b-1b4b-4ad7-9947-6467ea77ccda logged in [role=worker, org=21a7c891-2b02-4e69-a0e8-bdcf6a6772fe]
+23:28:55 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:28:55 INFO app.services.incident_service — Incident INC-2026-0014 created: id=d072f452-5b44-433a-9f77-3f99b0b3e42b, type=workplace_violence, org=21a7c891-2b02-4e69-a0e8-bdcf6a6772fe, commander=assigned, sop=assigned
+23:28:55 INFO app.routers.incidents — Incident INC-2026-0014 created by user 696ee05b-1b4b-4ad7-9947-6467ea77ccda [type=workplace_violence, source=ui_button, sop=yes]
+23:28:55 INFO httpx — HTTP Request: POST http://test/api/v1/incidents "HTTP/1.1 201 Created"
+23:28:56 INFO app.routers.auth — User 92ef6ef7-82dd-4d14-823c-4741b1a44910 logged in [role=worker, org=bca9a0d3-c259-4608-b73a-2d9c322cc5cb]
+23:28:56 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:28:56 WARNING app.services.incident_service — No active SOP found for emergency_type='generic' org=bca9a0d3-c259-4608-b73a-2d9c322cc5cb
+23:28:56 INFO app.services.incident_service — Incident INC-2026-0015 created: id=48999ce9-c4ab-4c5e-8375-64b82a5c9adf, type=generic, org=bca9a0d3-c259-4608-b73a-2d9c322cc5cb, commander=assigned, sop=none
+23:28:56 INFO app.routers.incidents — Incident INC-2026-0015 created by user 92ef6ef7-82dd-4d14-823c-4741b1a44910 [type=generic, source=voice, sop=none]
+23:28:56 WARNING app.routers.incidents — Incident INC-2026-0015: no SOP found for type 'generic', agent not started
+23:28:56 INFO httpx — HTTP Request: POST http://test/api/v1/incidents "HTTP/1.1 201 Created"
+23:28:56 INFO app.routers.auth — User c736f44b-af9d-4f34-b189-e037f5362c54 logged in [role=worker, org=433417b1-8258-4025-a317-24fe9395be0e]
+23:28:56 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:28:56 INFO app.services.incident_service — Incident INC-2026-0016 created: id=0849301c-2f64-4bac-b448-a6a9b4ce42d9, type=medical, org=433417b1-8258-4025-a317-24fe9395be0e, commander=assigned, sop=assigned
+23:28:56 INFO app.routers.incidents — Incident INC-2026-0016 created by user c736f44b-af9d-4f34-b189-e037f5362c54 [type=medical, source=voice, sop=yes]
+23:28:56 INFO httpx — HTTP Request: POST http://test/api/v1/incidents "HTTP/1.1 201 Created"
+23:28:56 INFO httpx — HTTP Request: GET http://test/api/v1/incidents/0849301c-2f64-4bac-b448-a6a9b4ce42d9 "HTTP/1.1 200 OK"
+23:28:57 INFO app.routers.auth — User 89b0bd9b-6331-47b3-8531-b97fe0a1c10a logged in [role=worker, org=3a5fbb40-f358-494e-b09b-ad4256dcdf06]
+23:28:57 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:28:57 INFO httpx — HTTP Request: GET http://test/api/v1/incidents/bca422c5-d49b-4980-9dc5-2cef4fabe1bf "HTTP/1.1 404 Not Found"
+23:28:57 INFO app.routers.auth — User 41772812-0500-446f-b29b-e83e69da1b99 logged in [role=worker, org=fbf35c8e-5faf-4e2c-a35e-189e7d22a6ea]
+23:28:57 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:28:57 INFO app.services.incident_service — Incident INC-2026-0017 created: id=c7e4a0be-5fc4-41bd-99bd-74a3ab1e1ccf, type=workplace_violence, org=fbf35c8e-5faf-4e2c-a35e-189e7d22a6ea, commander=assigned, sop=assigned
+23:28:57 INFO app.routers.incidents — Incident INC-2026-0017 created by user 41772812-0500-446f-b29b-e83e69da1b99 [type=workplace_violence, source=ui_button, sop=yes]
+23:28:57 INFO httpx — HTTP Request: POST http://test/api/v1/incidents "HTTP/1.1 201 Created"
+23:28:57 INFO httpx — HTTP Request: GET http://test/api/v1/incidents "HTTP/1.1 200 OK"
+23:28:58 INFO app.routers.auth — User b434858f-6f43-4e84-a245-c46a06df3a67 logged in [role=worker, org=a052ef4c-e702-49d9-a160-bc35e56564cf]
+23:28:58 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:28:58 INFO app.routers.auth — User cc455336-990d-4c30-b753-f629c6e94129 logged in [role=commander, org=a052ef4c-e702-49d9-a160-bc35e56564cf]
+23:28:58 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:28:58 INFO app.services.incident_service — Incident INC-2026-0018 created: id=31cf3d79-3bd3-48fe-875e-ef906e37b16d, type=workplace_violence, org=a052ef4c-e702-49d9-a160-bc35e56564cf, commander=assigned, sop=assigned
+23:28:58 INFO app.routers.incidents — Incident INC-2026-0018 created by user b434858f-6f43-4e84-a245-c46a06df3a67 [type=workplace_violence, source=ui_button, sop=yes]
+23:28:58 INFO httpx — HTTP Request: POST http://test/api/v1/incidents "HTTP/1.1 201 Created"
+23:28:58 INFO app.services.incident_service — Incident INC-2026-0018 resolved by cc455336-990d-4c30-b753-f629c6e94129
+23:28:58 INFO app.routers.incidents — Incident INC-2026-0018 resolved by user cc455336-990d-4c30-b753-f629c6e94129
+23:28:58 INFO httpx — HTTP Request: POST http://test/api/v1/incidents/31cf3d79-3bd3-48fe-875e-ef906e37b16d/resolve "HTTP/1.1 200 OK"
+23:28:59 INFO app.routers.auth — User 70584a9c-3579-4549-a88b-7c9a15b34fd6 logged in [role=worker, org=50700130-7841-446f-813b-449780eff73c]
+23:28:59 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:28:59 INFO app.routers.auth — User 9c41b8d6-90d0-434e-9434-0aed78644454 logged in [role=commander, org=50700130-7841-446f-813b-449780eff73c]
+23:28:59 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:28:59 INFO app.services.incident_service — Incident INC-2026-0019 created: id=668a17ca-b0cb-47a6-b7ba-1ae3a51f9033, type=workplace_violence, org=50700130-7841-446f-813b-449780eff73c, commander=assigned, sop=assigned
+23:28:59 INFO app.routers.incidents — Incident INC-2026-0019 created by user 70584a9c-3579-4549-a88b-7c9a15b34fd6 [type=workplace_violence, source=ui_button, sop=yes]
+23:28:59 INFO httpx — HTTP Request: POST http://test/api/v1/incidents "HTTP/1.1 201 Created"
+23:28:59 INFO app.services.incident_service — Incident INC-2026-0019 resolved by 9c41b8d6-90d0-434e-9434-0aed78644454
+23:28:59 INFO app.routers.incidents — Incident INC-2026-0019 resolved by user 9c41b8d6-90d0-434e-9434-0aed78644454
+23:28:59 INFO httpx — HTTP Request: POST http://test/api/v1/incidents/668a17ca-b0cb-47a6-b7ba-1ae3a51f9033/resolve "HTTP/1.1 200 OK"
+23:28:59 WARNING app.routers.incidents — Resolve rejected for incident 668a17ca-b0cb-47a6-b7ba-1ae3a51f9033: already in status 'resolved'
+23:28:59 INFO httpx — HTTP Request: POST http://test/api/v1/incidents/668a17ca-b0cb-47a6-b7ba-1ae3a51f9033/resolve "HTTP/1.1 400 Bad Request"
+23:28:59 INFO app.services.incident_service — Incident INC-2026-0020 created: id=0c3d17f5-d747-44df-9650-a6c267e133f9, type=workplace_violence, org=7c7702d7-6dfb-4ada-80f5-6ffadbc312b4, commander=assigned, sop=assigned
+23:28:59 INFO app.services.action_service — Action 77052838-3a8d-4667-a553-08fa6a44c444 created: type=dispatch_responder, tier=amber, incident=0c3d17f5-d747-44df-9650-a6c267e133f9
+23:28:59 INFO app.routers.auth — User 7e9e25ff-074e-43e4-b81e-ef5dc05c28ab logged in [role=commander, org=7c7702d7-6dfb-4ada-80f5-6ffadbc312b4]
+23:28:59 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:28:59 INFO app.services.action_service — Action 77052838-3a8d-4667-a553-08fa6a44c444 approved and executed by 7e9e25ff-074e-43e4-b81e-ef5dc05c28ab on incident 0c3d17f5-d747-44df-9650-a6c267e133f9
+23:28:59 INFO app.routers.actions — Action 77052838-3a8d-4667-a553-08fa6a44c444 approved by user 7e9e25ff-074e-43e4-b81e-ef5dc05c28ab on incident 0c3d17f5-d747-44df-9650-a6c267e133f9
+23:28:59 INFO httpx — HTTP Request: POST http://test/api/v1/incidents/0c3d17f5-d747-44df-9650-a6c267e133f9/actions/77052838-3a8d-4667-a553-08fa6a44c444/approve "HTTP/1.1 200 OK"
+23:29:00 INFO app.services.incident_service — Incident INC-2026-0021 created: id=f2f60f56-9fca-46bb-9ff0-c30bf91db647, type=workplace_violence, org=90739b42-1dad-4a78-b48a-bc936e56c7ff, commander=assigned, sop=assigned
+23:29:00 INFO app.services.action_service — Action ffff4676-533d-4718-a718-6b401c473330 created: type=contact_911, tier=red, incident=f2f60f56-9fca-46bb-9ff0-c30bf91db647
+23:29:00 INFO app.routers.auth — User 5ba3eae1-d193-4d2f-9525-0f31f9786ac3 logged in [role=commander, org=90739b42-1dad-4a78-b48a-bc936e56c7ff]
+23:29:00 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:29:00 INFO app.services.action_service — Action ffff4676-533d-4718-a718-6b401c473330 rejected by 5ba3eae1-d193-4d2f-9525-0f31f9786ac3 on incident f2f60f56-9fca-46bb-9ff0-c30bf91db647 [reason='Not needed']
+23:29:00 INFO app.routers.actions — Action ffff4676-533d-4718-a718-6b401c473330 rejected by user 5ba3eae1-d193-4d2f-9525-0f31f9786ac3 on incident f2f60f56-9fca-46bb-9ff0-c30bf91db647 [reason='Not needed']
+23:29:00 INFO httpx — HTTP Request: POST http://test/api/v1/incidents/f2f60f56-9fca-46bb-9ff0-c30bf91db647/actions/ffff4676-533d-4718-a718-6b401c473330/reject "HTTP/1.1 200 OK"
+23:29:00 INFO app.routers.auth — User 27b58d2c-e2ec-40cc-8e4f-60dd605edd55 logged in [role=worker, org=481af263-2fcf-41bb-9cc1-67f6d7dd0239]
+23:29:00 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:29:00 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions "HTTP/1.1 201 Created"
+23:29:01 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions "HTTP/1.1 403 Forbidden"
+23:29:01 INFO app.routers.auth — User 67e74a4a-d954-4721-ba05-de8e29242192 logged in [role=worker, org=522f7437-dfac-432c-974b-5f905ada1749]
+23:29:01 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:29:01 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions "HTTP/1.1 201 Created"
+23:29:01 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions/ac329636-2d74-4f20-b147-e2673af19efc/end "HTTP/1.1 200 OK"
+23:29:02 INFO app.routers.auth — User 1da294c1-73b8-4412-96cd-b7558b355d24 logged in [role=worker, org=7cec21e3-afa4-46f9-b142-4a1bc10080fd]
+23:29:02 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:29:02 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions "HTTP/1.1 201 Created"
+23:29:02 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions/71d93e27-165a-412c-a6b0-c75d83ce18f1/end "HTTP/1.1 200 OK"
+23:29:02 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions/71d93e27-165a-412c-a6b0-c75d83ce18f1/end "HTTP/1.1 400 Bad Request"
+23:29:02 INFO app.routers.auth — User 6b0f5dc4-34b0-4591-a0e1-5afde9a8b432 logged in [role=worker, org=141af0e0-6565-4837-96ff-1c3058eb7840]
+23:29:02 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:29:02 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions/2ca7a384-cfe3-46dc-b3b6-d5f8064158a7/end "HTTP/1.1 404 Not Found"
+23:29:03 INFO app.routers.auth — User f06d1384-7c17-4b2d-a843-576cf92190e7 logged in [role=worker, org=46d615c5-8b7a-442c-a9e3-485c1b3660f9]
+23:29:03 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:29:03 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions/cc129f53-de59-4ccd-a79d-5dc325a23347/end "HTTP/1.1 403 Forbidden"
+23:29:03 INFO app.routers.auth — User b59d1749-c9c6-403f-97cb-de51ffdf4508 logged in [role=commander, org=c3e533e6-e6dc-44f8-ab80-a27162289242]
+23:29:03 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:29:03 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions/eafc4b4d-847f-40c1-a635-3a95e9631ab5/end "HTTP/1.1 200 OK"
+23:29:04 INFO app.routers.auth — User 75e41067-7de9-406a-8b3f-9f57739eee45 logged in [role=worker, org=e89c65bb-e0a7-4ce1-b9e1-64207f8ed4b9]
+23:29:04 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:29:04 INFO app.routers.auth — User 488bc08a-e804-47bc-bf4f-6ddb59f4a058 logged in [role=commander, org=e89c65bb-e0a7-4ce1-b9e1-64207f8ed4b9]
+23:29:04 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:29:04 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions "HTTP/1.1 201 Created"
+23:29:04 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions "HTTP/1.1 201 Created"
+23:29:04 INFO httpx — HTTP Request: GET http://test/api/v1/monitoring/sessions "HTTP/1.1 200 OK"
+23:29:05 INFO app.routers.auth — User ede95995-27f2-4c3a-9ca8-9fb490dc5eb5 logged in [role=worker, org=19416756-a08a-41dc-95ce-d20895b72a55]
+23:29:05 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:29:05 INFO app.routers.auth — User 0b7c7f8a-f3b6-4f34-951c-858d7dc03d43 logged in [role=commander, org=19416756-a08a-41dc-95ce-d20895b72a55]
+23:29:05 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:29:05 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions "HTTP/1.1 201 Created"
+23:29:05 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions "HTTP/1.1 201 Created"
+23:29:05 INFO httpx — HTTP Request: GET http://test/api/v1/monitoring/sessions "HTTP/1.1 200 OK"
+23:29:05 INFO app.routers.auth — User bdeb317a-a514-4e24-b9a9-6957661b0f75 logged in [role=worker, org=99841a6c-952b-4985-adab-27cf9c22bde2]
+23:29:05 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:29:05 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions "HTTP/1.1 201 Created"
+23:29:05 INFO httpx — HTTP Request: GET http://test/api/v1/monitoring/sessions/ee9d9c18-0ae5-4324-86f6-929aa87f699d "HTTP/1.1 200 OK"
+23:29:06 INFO app.routers.auth — User d2f44d30-bc9e-4b38-8f16-6634572b18e3 logged in [role=worker, org=2236796a-5166-4d25-b2a7-d649b3a9bb95]
+23:29:06 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:29:06 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions "HTTP/1.1 201 Created"
+23:29:06 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions/485e37a8-ed74-4c1f-b038-1bc51a8ae6df/telemetry "HTTP/1.1 200 OK"
+23:29:06 INFO app.routers.auth — User 1052ff68-9761-4e2f-a1ec-fe0299fd866f logged in [role=worker, org=6f2e44b6-db45-4d2f-9029-d181b942d9a9]
+23:29:06 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:29:06 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions "HTTP/1.1 201 Created"
+23:29:06 INFO app.services.incident_service — Incident INC-2026-0022 created: id=ef8a7b1e-1397-490b-80ff-42997939e540, type=medical, org=6f2e44b6-db45-4d2f-9029-d181b942d9a9, commander=assigned, sop=assigned
+23:29:06 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions/61d0887f-f03e-4b36-8fec-8a43ab698f73/telemetry "HTTP/1.1 200 OK"
+23:29:06 INFO httpx — HTTP Request: GET http://test/api/v1/monitoring/sessions/61d0887f-f03e-4b36-8fec-8a43ab698f73 "HTTP/1.1 200 OK"
+23:29:07 INFO app.routers.auth — User 6c14023f-fb87-41d1-8014-b5c2925eded0 logged in [role=worker, org=e4a73dd4-acd7-49ec-8cd5-46b4f5cc29f2]
+23:29:07 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:29:07 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions "HTTP/1.1 201 Created"
+23:29:07 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions/d7efcb03-1dbb-4a6e-81bf-81c71cc3f995/end "HTTP/1.1 200 OK"
+23:29:07 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions/d7efcb03-1dbb-4a6e-81bf-81c71cc3f995/telemetry "HTTP/1.1 400 Bad Request"
+23:29:07 INFO app.routers.auth — User 764ae083-5d88-4b31-af90-868230980862 logged in [role=worker, org=e28f8bf4-1006-4dba-bbf5-8cb06311928f]
+23:29:07 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:29:07 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions "HTTP/1.1 201 Created"
+23:29:07 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions/6ab600b8-ce52-4ed3-88b7-fd596d2edb3a/telemetry "HTTP/1.1 400 Bad Request"
+23:29:08 INFO app.routers.auth — User 2540334e-9b7f-48eb-95c3-f6a1dd77da77 logged in [role=worker, org=7f648c2d-371c-4f03-a050-a10c9d3b72cf]
+23:29:08 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:29:08 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions "HTTP/1.1 201 Created"
+23:29:08 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions/1d77cc5f-fc26-4cd3-913a-3e1d09cbeade/telemetry "HTTP/1.1 200 OK"
+23:29:08 INFO httpx — HTTP Request: GET http://test/api/v1/monitoring/sessions/1d77cc5f-fc26-4cd3-913a-3e1d09cbeade/telemetry "HTTP/1.1 200 OK"
+23:29:08 INFO app.routers.auth — User b31da718-b937-4ae1-9a65-a93ab9184331 logged in [role=worker, org=517d58d2-3c56-4f97-bcdb-c8b8928eb6ae]
+23:29:08 INFO httpx — HTTP Request: POST http://test/api/v1/auth/login "HTTP/1.1 200 OK"
+23:29:08 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions "HTTP/1.1 201 Created"
+23:29:08 INFO httpx — HTTP Request: POST http://test/api/v1/monitoring/sessions/25a65294-434c-4bf4-be2b-320b0ca70229/telemetry "HTTP/1.1 200 OK"
+23:29:08 INFO httpx — HTTP Request: GET http://test/api/v1/monitoring/sessions/25a65294-434c-4bf4-be2b-320b0ca70229/telemetry?event_type=location "HTTP/1.1 200 OK"
+23:29:09 INFO app.services.incident_service — Incident INC-2026-0023 created: id=dc3206ef-247d-4c63-86b8-0b491998d90b, type=workplace_violence, org=f9b6620d-23d0-4753-a518-ddb98238406c, commander=assigned, sop=assigned
+23:29:09 INFO app.services.incident_service — Incident INC-2026-0024 created: id=88731fc7-ecfb-4155-84e8-e5e8dec46944, type=workplace_violence, org=cb0fa904-f816-4ce3-b64f-2bb020fa62ba, commander=assigned, sop=assigned
+23:29:10 INFO app.services.incident_service — Incident INC-2026-0025 created: id=3fd4bd93-b8ca-4575-8593-f688a841b7c5, type=medical, org=539f4caf-4baa-4b57-9f0a-8663233d2b38, commander=assigned, sop=assigned
+23:29:10 INFO app.services.incident_service — Incident INC-2026-0026 created: id=31fec06e-dad4-4da2-a88f-e33472c70c36, type=workplace_violence, org=9c261744-8222-4394-9f89-bf99b6b921bf, commander=assigned, sop=assigned
+23:29:10 INFO app.services.incident_service — Incident INC-2026-0027 created: id=ddc012d6-0701-417d-9e37-5a6cb583f407, type=workplace_violence, org=11d4398f-90b9-435c-a518-6281666f37c6, commander=assigned, sop=assigned
+23:29:11 INFO app.services.incident_service — Incident INC-2026-0028 created: id=b51b50a1-f171-4d64-a5de-ac6ee184886d, type=workplace_violence, org=26935f4f-d242-4ee7-8ee6-1d1bf3a2cd14, commander=assigned, sop=assigned
+23:29:11 INFO app.services.incident_service — Incident INC-2026-0029 created: id=273c9b7c-75d9-4a99-abbf-d41084abf586, type=workplace_violence, org=facbd682-0034-4b84-8adf-a0a456be6c5b, commander=assigned, sop=assigned
+23:29:11 INFO app.services.incident_service — Incident INC-2026-0029 resolved by 4a0f85ab-1ea4-43fd-b76f-110633901ef2
+23:29:11 INFO app.services.incident_service — Incident INC-2026-0030 created: id=9033ab63-a151-4a25-85a6-521e41515fcb, type=workplace_violence, org=e4339630-d61b-452b-9eef-1c02ccc89792, commander=assigned, sop=assigned
+23:29:11 INFO app.services.incident_service — Incident INC-2026-0030 resolved by da7c104b-7fc8-4161-ab6e-93b0516cfce9
+23:29:12 INFO app.services.incident_service — Incident INC-2026-0031 created: id=40983fb5-01f2-4c1d-8893-d79219053b3b, type=workplace_violence, org=430d9c5f-a1b1-4d2d-8e24-7856b362bf74, commander=assigned, sop=assigned
+23:29:12 INFO app.services.action_service — Action 16116e17-c1f5-46b8-a451-274455edb84d created: type=dispatch_responder, tier=amber, incident=40983fb5-01f2-4c1d-8893-d79219053b3b
+23:29:12 INFO app.services.incident_service — Incident INC-2026-0032 created: id=e0ec49d8-a833-475b-9ea7-8fe984c06147, type=workplace_violence, org=e4c084ec-9b84-4e3a-9a91-dc37fe036b31, commander=assigned, sop=assigned
+23:29:12 INFO app.services.action_service — Action ddb46426-4f00-4fb7-81a5-23af0afaa13b created: type=dispatch_responder, tier=amber, incident=e0ec49d8-a833-475b-9ea7-8fe984c06147
+23:29:12 INFO app.services.action_service — Action ddb46426-4f00-4fb7-81a5-23af0afaa13b approved and executed by c16ead9e-7fae-4749-a5f8-433c32968cf0 on incident e0ec49d8-a833-475b-9ea7-8fe984c06147
+23:29:12 INFO app.services.incident_service — Incident INC-2026-0033 created: id=851a964d-2601-4d30-9a4c-114c67968ae2, type=workplace_violence, org=541d1c48-2524-443a-b55b-2b6977ee3076, commander=assigned, sop=assigned
+23:29:12 INFO app.services.action_service — Action 9153bbe5-0ea9-4f13-a437-94d6c6f97132 created: type=contact_911, tier=red, incident=851a964d-2601-4d30-9a4c-114c67968ae2
+23:29:12 INFO app.services.action_service — Action 9153bbe5-0ea9-4f13-a437-94d6c6f97132 rejected by d92d17b8-ed59-4682-81d8-6351c965ec0d on incident 851a964d-2601-4d30-9a4c-114c67968ae2 [reason='Not necessary']
+23:29:13 INFO app.services.incident_service — Incident INC-2026-0034 created: id=e64814da-50dc-42f5-bb1d-0cea18cd2d93, type=medical, org=add398b4-f548-404d-a9be-887b5fbe4d62, commander=assigned, sop=assigned
+23:29:13 INFO app.services.incident_service — Incident INC-2026-0035 created: id=b644ca87-1eca-42a7-88c0-331f76f8afdb, type=medical, org=86ca83da-6d3c-412e-bb9c-06f2afb0259a, commander=assigned, sop=assigned
+23:29:16 INFO app.services.incident_service — Incident INC-2026-0036 created: id=694caa94-363f-4691-ad6f-41420c19e54e, type=medical, org=e6c5a9b1-4d2a-429a-98bb-5c8bac6c42f5, commander=assigned, sop=assigned
+23:29:17 INFO app.services.incident_service — Incident INC-2026-0037 created: id=89de51d3-ddd0-4bcb-b9dd-4dea637bd65f, type=medical, org=538aea80-67dc-4b4a-babd-804006161924, commander=assigned, sop=assigned

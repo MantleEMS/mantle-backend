@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from uuid import UUID
 
@@ -40,6 +40,6 @@ class UserOut(BaseModel):
     name: str
     role: str
     status: str
-    org_id: UUID
+    org_id: Optional[UUID] = None
 
     model_config = ConfigDict(from_attributes=True)

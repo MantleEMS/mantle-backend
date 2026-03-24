@@ -51,6 +51,7 @@ class FacilityCreate(BaseModel):
     cell_coverage: Optional[str] = "unknown"
     nearest_hospital: Optional[dict] = {}
     notes: Optional[str] = None
+    org_id: Optional[UUID] = None  # only used when caller is super_admin
 
 
 class FacilityUpdate(BaseModel):
@@ -102,6 +103,7 @@ class SOPCreate(BaseModel):
     steps: List[SOPStepOut] = []
     responder_checklist: List[ResponderChecklistItem] = []
     is_active: bool = True
+    org_id: Optional[UUID] = None  # only used when caller is super_admin
 
 
 class SOPUpdate(BaseModel):
@@ -116,7 +118,7 @@ class SOPUpdate(BaseModel):
 
 class UserOut(BaseModel):
     id: UUID
-    org_id: UUID
+    org_id: Optional[UUID] = None
     email: str
     name: str
     phone: Optional[str] = None
@@ -142,6 +144,7 @@ class UserCreate(BaseModel):
     qualifications: Optional[list] = []
     medical_flags: Optional[list] = []
     device_info: Optional[dict] = {}
+    org_id: Optional[UUID] = None  # only used when caller is super_admin
 
 
 class UserUpdate(BaseModel):
