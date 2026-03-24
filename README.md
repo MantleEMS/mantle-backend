@@ -212,6 +212,62 @@ Login via `POST /api/v1/auth/login` with `{ "email": "...", "password": "..." }`
 
 ---
 
+## Roles & Statuses Reference
+
+### User
+
+| Field | Values |
+|---|---|
+| `role` | `super_admin`, `org_admin`, `admin`, `commander`, `supervisor`, `responder`, `worker` |
+| `status` | `active`, `on_duty`, `off_duty`, `inactive` |
+
+### Incident
+
+| Field | Values |
+|---|---|
+| `status` | `triggered`, `active`, `resolved`, `cancelled` |
+| `emergency_type` | `workplace_violence`, `medical`, `other`, `generic` |
+| `trigger_source` | `ui_button`, `voice`, `pendant`, `ai_detected`, `commander` |
+
+### Action
+
+| Field | Values |
+|---|---|
+| `status` | `pending`, `approved`, `rejected`, `executed`, `failed`, `expired` |
+| `tier` | `green`, `amber`, `red` |
+
+### Participant
+
+| Field | Values |
+|---|---|
+| `role` | `initiator`, `commander`, `responder`, `ai_agent` |
+| `dispatch_status` | `pending`, `accepted`, `declined`, `en_route`, `arrived` |
+
+### Monitoring Session
+
+| Field | Values |
+|---|---|
+| `status` | `active`, `ended`, `escalated` |
+| `end_reason` | `manual`, `timeout`, `escalated`, `panic` |
+
+### Message
+
+| Field | Values |
+|---|---|
+| `sender_type` | `human`, `ai`, `system` |
+| `message_type` | `text`, `system_event`, `classification`, `action`, `evidence`, `status_update`, `command_transfer`, `closure` |
+
+### Other
+
+| Model | Field | Values |
+|---|---|---|
+| `Facility` | `facility_type` | `patient_home`, `office`, `hospital`, `snf`, `other` |
+| `Evidence` | `file_type` | `photo`, `audio`, `video`, `document` |
+| `TelemetryEvent` | `event_type` | `location`, `fall_detected`, `heart_rate`, `speed`, `custom` |
+| `AuditLog` | `actor_type` | `human`, `ai`, `system` |
+
+---
+
 ## API Endpoints
 
 | Method | Path | Description |
