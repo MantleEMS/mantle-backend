@@ -11,7 +11,7 @@ import uuid
 
 from app.database import get_db, AsyncSessionLocal
 from app.dependencies import get_current_user, decode_token
-from app.models import User, Incident, Message, Participant
+from app.models import User, Incident, Message, Participant, IncidentEventLog
 from app.schemas.threads import PostMessageRequest, MessageOut
 from app.services.thread_service import create_message, get_messages
 from app.redis_client import get_redis, redis_setex
@@ -169,12 +169,28 @@ async def websocket_endpoint(
                         participant = participant_result.scalar_one_or_none()
                         if participant:
                             from datetime import timezone
+                            now = datetime.now(timezone.utc)
                             participant.last_location = {
                                 "lat": lat,
                                 "lng": lng,
                                 "accuracy_m": accuracy,
-                                "updated_at": datetime.now(timezone.utc).isoformat(),
+                                "updated_at": now.isoformat(),
                             }
+                            # Append to incident audit trail (never overwritten)
+                            incident_result = await db.execute(
+                                select(Incident).where(Incident.id == incident_id)
+                            )
+                            incident = incident_result.scalar_one_or_none()
+                            if incident:
+                                db.add(IncidentEventLog(
+                                    incident_id=incident_id,
+                                    org_id=incident.org_id,
+                                    user_id=uuid.UUID(user_id_str),
+                                    event_type="participant.location",
+                                    source="incident_ws",
+                                    data={"lat": lat, "lng": lng, "accuracy_m": accuracy},
+                                    recorded_at=now,
+                                ))
                             await db.commit()
 
                     # Broadcast location event

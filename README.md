@@ -286,6 +286,52 @@ Login via `POST /api/v1/auth/login` with `{ "email": "...", "password": "..." }`
 
 ---
 
+## Data Retention & Audit
+
+### Design decisions
+
+**Incidents can originate from two sources:**
+- A monitoring session that escalated (fall detected, panic trigger)
+- An independently triggered incident (manual button, voice, pendant, commander)
+
+Because of this, the audit trail cannot rely solely on the monitoring telemetry stream. Instead, a single `incident_event_log` table serves as the long-term audit record for all incidents, regardless of origin.
+
+### incident_event_log
+
+Append-only table. Never overwritten, never downsampled. Retained for compliance/legal.
+
+| event_type | source | When written |
+|---|---|---|
+| `participant.location` | `incident_ws` | Every location update sent over WebSocket during an active incident |
+| `telemetry_snapshot` | `monitoring_escalation` | Pre-incident telemetry (last 30 min) copied at the moment a monitoring session escalates |
+
+For monitoring-originated incidents, the snapshot gives full sensor context leading up to the event. For independently triggered incidents, the log starts at incident creation and captures participant movement from that point forward.
+
+### telemetry_events retention tiers
+
+The `telemetry_events` table is the high-frequency operational stream from monitoring sessions. It is subject to tiered retention:
+
+| Tier | Age | Policy |
+|---|---|---|
+| Hot | 0–7 days | Full resolution, all event types |
+| Warm | 7–90 days | `location` events downsampled to 1 per minute per session; other types kept as-is |
+| Cold | 90+ days | All events deleted for ended/escalated sessions |
+
+Retention is safe to run because incident audit data is already captured in `incident_event_log` at escalation time — deleting the source rows does not affect the audit trail.
+
+### Running retention
+
+Call `app.services.retention_service.run_retention(db)` on a schedule (nightly recommended). It runs two passes: downsample then purge. Returns `{"downsampled": N, "purged": N}` for logging.
+
+```bash
+# pg_cron example (run inside Postgres)
+SELECT cron.schedule('nightly-retention', '0 2 * * *', $$
+  -- wire up to your preferred scheduler; the Python function handles batching
+$$);
+```
+
+---
+
 ## Production Checklist
 
 - [ ] Replace `SECRET_KEY` with a strong random value (`openssl rand -hex 32`)

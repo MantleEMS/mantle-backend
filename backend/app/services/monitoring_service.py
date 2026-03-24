@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import MonitoringSession, TelemetryEvent
+from app.models import MonitoringSession, TelemetryEvent, IncidentEventLog
 from app.schemas.monitoring import TelemetryEventIn
 from app.services.thread_service import write_audit
 
@@ -143,6 +143,32 @@ async def submit_telemetry(
         session.end_reason = "escalated"
         session.ended_at = now
         session.incident_id = incident_id
+
+        # Snapshot the last 30 minutes of telemetry into the incident audit trail.
+        # This preserves pre-incident context for any incident, regardless of origin.
+        from datetime import timedelta
+        snapshot_after = now - timedelta(minutes=30)
+        snapshot_result = await db.execute(
+            select(TelemetryEvent)
+            .where(
+                and_(
+                    TelemetryEvent.session_id == session.id,
+                    TelemetryEvent.recorded_at >= snapshot_after,
+                )
+            )
+            .order_by(TelemetryEvent.recorded_at.asc())
+        )
+        snapshot_events = snapshot_result.scalars().all()
+        for te in snapshot_events:
+            db.add(IncidentEventLog(
+                incident_id=incident_id,
+                org_id=session.org_id,
+                user_id=session.user_id,
+                event_type="telemetry_snapshot",
+                source="monitoring_escalation",
+                data={"original_event_type": te.event_type, **te.data},
+                recorded_at=te.recorded_at,
+            ))
 
     await db.commit()
 

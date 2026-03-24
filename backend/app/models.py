@@ -298,6 +298,34 @@ class TelemetryEvent(Base):
     )
 
 
+class IncidentEventLog(Base):
+    """
+    Append-only audit trail for all incidents, regardless of origin.
+    Covers real-time location updates (WebSocket) and pre-incident telemetry
+    snapshots copied from monitoring sessions at escalation time.
+    Retained long-term for compliance; never overwritten or downsampled.
+    """
+    __tablename__ = "incident_event_log"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    incident_id = Column(UUID(as_uuid=True), ForeignKey("incidents.id"), nullable=False)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    # event_type: participant.location, telemetry_snapshot
+    event_type = Column(String(80), nullable=False)
+    # source: incident_ws (real-time), monitoring_escalation (pre-incident snapshot)
+    source = Column(String(50), nullable=False, default="incident_ws")
+    data = Column(JSONB, nullable=False, default=dict)
+    # recorded_at: client-side or original event timestamp
+    recorded_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_incident_event_log_incident_recorded", "incident_id", "recorded_at"),
+        Index("ix_incident_event_log_incident_event_type", "incident_id", "event_type"),
+    )
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 
