@@ -83,6 +83,73 @@ async def list_messages(
     ]
 
 
+@router.get(
+    "/{incident_id}/ws",
+    tags=["threads"],
+    summary="Incident WebSocket (documentation only)",
+    response_description="This endpoint is WebSocket-only. HTTP requests return 404.",
+    responses={404: {"description": "Use ws:// or wss:// to connect, not HTTP."}},
+)
+async def websocket_docs(incident_id: uuid.UUID):
+    """
+    **WebSocket endpoint** — connect with `ws://.../api/v1/incidents/{incident_id}/ws?token=<jwt>`
+
+    This HTTP route exists only to document the WebSocket contract in Swagger.
+    HTTP requests to this path will return 404. Use a WebSocket client to connect.
+
+    ---
+    **Authentication**
+
+    Pass the JWT as a query parameter (headers are not supported in browser WebSockets):
+    ```
+    ws://host/api/v1/incidents/{incident_id}/ws?token=<access_token>&last_seq=0
+    ```
+
+    | Query param | Required | Description |
+    |---|---|---|
+    | `token` | Yes | JWT access token |
+    | `last_seq` | No | Resume from this message sequence number |
+
+    ---
+    **Client → Server messages**
+
+    Location update (send periodically while the participant is active):
+    ```json
+    {"type": "location", "lat": 37.7749, "lng": -122.4194, "accuracy_m": 5.0}
+    ```
+    `accuracy_m` is optional.
+
+    Heartbeat (send every ~20 s to maintain presence):
+    ```json
+    {"type": "heartbeat"}
+    ```
+
+    ---
+    **Server → Client events**
+
+    On connect, the server immediately pushes a full snapshot:
+    ```json
+    {
+      "type": "snapshot",
+      "incident": { ... },
+      "participants": [ ... ],
+      "messages": [ ... ],
+      "pending_actions": [ ... ]
+    }
+    ```
+
+    Subsequent events pushed by the server:
+
+    | `type` | Description |
+    |---|---|
+    | `participant.location` | A participant's position changed: `{user_id, lat, lng, updated_at}` |
+    | `message.new` | New message posted to the incident thread |
+    | `action.new` | New action created, waiting for approval |
+    | `incident.updated` | Incident status or field changed |
+    """
+    raise HTTPException(status_code=404, detail="WebSocket endpoint — connect via ws:// not http://")
+
+
 @router.websocket("/{incident_id}/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
