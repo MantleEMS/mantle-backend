@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Mantle EMS — Mobile Simulator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; background: #0f172a; }
+    .phone-frame {
+      max-width: 390px;
+      margin: 0 auto;
+      min-height: 100vh;
+      background: #f8fafc;
+      position: relative;
+    }
+    .screen { display: none; }
+    .screen.active { display: flex; flex-direction: column; min-height: 100vh; }
+    .sos-button {
+      width: 180px; height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #ff4444, #cc0000);
+      box-shadow: 0 0 0 12px rgba(220,0,0,0.15), 0 0 0 24px rgba(220,0,0,0.07);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+      user-select: none;
+    }
+    .sos-button:active {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 6px rgba(220,0,0,0.2), 0 0 0 14px rgba(220,0,0,0.08);
+    }
+    .sos-button.pulsing {
+      animation: pulse-sos 1.5s infinite;
+    }
+    @keyframes pulse-sos {
+      0%, 100% { box-shadow: 0 0 0 12px rgba(220,0,0,0.15), 0 0 0 24px rgba(220,0,0,0.07); }
+      50% { box-shadow: 0 0 0 20px rgba(220,0,0,0.2), 0 0 0 40px rgba(220,0,0,0.08); }
+    }
+    .ws-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .ws-dot.connected { background: #22c55e; }
+    .ws-dot.disconnected { background: #ef4444; }
+    .ws-dot.connecting { background: #f59e0b; animation: blink 1s infinite; }
+    @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+    .msg-bubble { padding: 8px 12px; border-radius: 12px; max-width: 80%; font-size: 13px; }
+    .msg-human { background: #6366f1; color: white; align-self: flex-end; border-bottom-right-radius: 3px; }
+    .msg-ai { background: white; color: #1e293b; border: 1px solid #e2e8f0; align-self: flex-start; border-bottom-left-radius: 3px; }
+    .msg-system { background: #f1f5f9; color: #64748b; align-self: center; font-size: 11px; font-style: italic; text-align: center; }
+    .tab-bar { display: flex; background: white; border-top: 1px solid #e2e8f0; position: sticky; bottom: 0; z-index: 10; }
+    .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px 4px 6px; cursor: pointer; font-size: 10px; color: #94a3b8; transition: color 0.15s; }
+    .tab-item.active { color: #6366f1; }
+    .tab-item span { font-size: 20px; }
+    input, select, textarea { -webkit-appearance: none; appearance: none; }
+    .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; }
+  </style>
+</head>
+<body>
+<div class="phone-frame">
+
+  <!-- ════════════════════════════════════════════════
+       SCREEN: LOGIN
+       ════════════════════════════════════════════════ -->
+  <div id="screen-login" class="screen active p-6 bg-slate-900 justify-center items-center gap-6">
+    <div class="text-center">
+      <div class="text-white text-3xl font-bold mb-1">Mantle EMS</div>
+      <div class="text-slate-400 text-sm">Mobile Simulator</div>
+    </div>
+    <div class="w-full space-y-3">
+      <div>
+        <label class="block text-slate-400 text-xs mb-1">API Base URL</label>
+        <input id="base-url" type="text" value="http://localhost:8000"
+          class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm border border-slate-700 focus:outline-none focus:border-indigo-500" />
+      </div>
+      <div>
+        <label class="block text-slate-400 text-xs mb-1">Email</label>
+        <input id="login-email" type="email" placeholder="worker@example.com"
+          class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm border border-slate-700 focus:outline-none focus:border-indigo-500" />
+      </div>
+      <div>
+        <label class="block text-slate-400 text-xs mb-1">Password</label>
+        <input id="login-password" type="password" placeholder="••••••••"
+          class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm border border-slate-700 focus:outline-none focus:border-indigo-500" />
+      </div>
+      <div id="login-error" class="text-red-400 text-sm hidden"></div>
+      <button onclick="doLogin()"
+        class="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition mt-2">
+        Sign In
+      </button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       SCREEN: HOME (SOS)
+       ════════════════════════════════════════════════ -->
+  <div id="screen-home" class="screen bg-slate-50">
+    <div class="bg-white px-4 pt-10 pb-4 shadow-sm">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="font-bold text-lg" id="home-name">Loading...</div>
+          <div class="text-sm text-slate-500" id="home-role"></div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="home-status-badge" class="badge bg-slate-100 text-slate-600">—</span>
+          <button onclick="doLogout()" class="text-slate-400 text-sm hover:text-slate-600">↩</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex-1 flex flex-col items-center justify-center gap-8 px-6 py-8">
+      <!-- SOS Button -->
+      <div class="text-center">
+        <div class="text-slate-500 text-sm mb-6 font-medium">HOLD TO TRIGGER</div>
+        <div class="sos-button" id="sos-btn" onmousedown="startSOSHold()" onmouseup="cancelSOSHold()"
+          ontouchstart="startSOSHold(event)" ontouchend="cancelSOSHold()">
+          <div class="text-center">
+            <div class="text-white text-3xl font-black tracking-widest">SOS</div>
+            <div class="text-red-200 text-xs mt-1" id="sos-countdown"></div>
+          </div>
+        </div>
+        <div class="text-slate-400 text-xs mt-4" id="sos-hint">Hold for 3 seconds to trigger</div>
+      </div>
+
+      <!-- Quick options -->
+      <div class="w-full space-y-2">
+        <div class="text-xs text-slate-400 font-semibold uppercase tracking-wide mb-2">Emergency Type</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="selectEmergencyType('workplace_violence')" id="btn-workplace_violence"
+            class="etype-btn bg-white border-2 border-red-200 text-red-700 rounded-xl py-3 text-sm font-medium hover:border-red-400 transition">
+            ⚡ Workplace Violence
+          </button>
+          <button onclick="selectEmergencyType('medical')" id="btn-medical"
+            class="etype-btn bg-white border-2 border-blue-200 text-blue-700 rounded-xl py-3 text-sm font-medium hover:border-blue-400 transition">
+            🏥 Medical
+          </button>
+          <button onclick="selectEmergencyType('other')" id="btn-other"
+            class="etype-btn bg-white border-2 border-orange-200 text-orange-700 rounded-xl py-3 text-sm font-medium hover:border-orange-400 transition">
+            ⚠️ Other
+          </button>
+          <button onclick="selectEmergencyType('generic')" id="btn-generic"
+            class="etype-btn bg-white border-2 border-slate-200 text-slate-700 rounded-xl py-3 text-sm font-medium hover:border-slate-400 transition selected">
+            📢 Generic
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab-item active" onclick="switchTab('home')"><span>🆘</span>SOS</div>
+      <div class="tab-item" onclick="switchTab('monitor')"><span>📡</span>Monitor</div>
+      <div class="tab-item" onclick="switchTab('incidents')"><span>📋</span>Incidents</div>
+      <div class="tab-item" onclick="switchTab('profile')"><span>👤</span>Profile</div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       SCREEN: MONITOR
+       ════════════════════════════════════════════════ -->
+  <div id="screen-monitor" class="screen bg-slate-50">
+    <div class="bg-white px-4 pt-10 pb-4 shadow-sm">
+      <div class="font-bold text-lg">Monitoring Session</div>
+      <div class="text-sm text-slate-500">Worker safety monitoring</div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+
+      <!-- Session Status Card -->
+      <div class="bg-white rounded-2xl shadow-sm p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="font-semibold text-sm">Session Status</div>
+          <span id="session-badge" class="badge bg-slate-100 text-slate-600">No Session</span>
+        </div>
+        <div id="session-info" class="text-xs text-slate-500 mb-3">No active monitoring session.</div>
+
+        <div id="session-controls-start" class="">
+          <div class="mb-3">
+            <label class="block text-xs text-slate-500 mb-1">Check-in Interval (seconds)</label>
+            <input id="checkin-interval" type="number" value="60"
+              class="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+          </div>
+          <button onclick="startMonitoringSession()"
+            class="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-medium text-sm hover:bg-indigo-700">
+            Start Monitoring Session
+          </button>
+        </div>
+
+        <div id="session-controls-active" class="hidden space-y-2">
+          <button onclick="endMonitoringSession()"
+            class="w-full border border-red-300 text-red-600 py-2.5 rounded-xl font-medium text-sm hover:bg-red-50">
+            End Session
+          </button>
+        </div>
+      </div>
+
+      <!-- Telemetry Submission -->
+      <div id="telemetry-panel" class="bg-white rounded-2xl shadow-sm p-4 hidden">
+        <div class="font-semibold text-sm mb-3">Submit Telemetry</div>
+        <div class="space-y-2">
+          <button onclick="submitTelemetry('location')"
+            class="w-full bg-blue-50 text-blue-700 py-2 rounded-xl text-sm font-medium hover:bg-blue-100">
+            📍 Send Location Update
+          </button>
+          <button onclick="submitTelemetry('fall_detected')"
+            class="w-full bg-orange-50 text-orange-700 py-2 rounded-xl text-sm font-medium hover:bg-orange-100">
+            🚨 Simulate Fall Detection
+          </button>
+          <button onclick="submitTelemetry('heart_rate')"
+            class="w-full bg-red-50 text-red-700 py-2 rounded-xl text-sm font-medium hover:bg-red-100">
+            ❤️ Send Heart Rate (85 bpm)
+          </button>
+          <button onclick="submitTelemetry('speed')"
+            class="w-full bg-green-50 text-green-700 py-2 rounded-xl text-sm font-medium hover:bg-green-100">
+            🏃 Send Speed Data
+          </button>
+        </div>
+        <div id="telemetry-result" class="mt-3 text-xs text-slate-500"></div>
+      </div>
+
+      <!-- Telemetry Log -->
+      <div id="telemetry-log-panel" class="bg-white rounded-2xl shadow-sm p-4 hidden">
+        <div class="flex items-center justify-between mb-2">
+          <div class="font-semibold text-sm">Telemetry Log</div>
+          <button onclick="loadTelemetry()" class="text-xs text-indigo-600">Refresh</button>
+        </div>
+        <div id="telemetry-log" class="space-y-1 max-h-48 overflow-y-auto"></div>
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab-item" onclick="switchTab('home')"><span>🆘</span>SOS</div>
+      <div class="tab-item active" onclick="switchTab('monitor')"><span>📡</span>Monitor</div>
+      <div class="tab-item" onclick="switchTab('incidents')"><span>📋</span>Incidents</div>
+      <div class="tab-item" onclick="switchTab('profile')"><span>👤</span>Profile</div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       SCREEN: INCIDENTS
+       ════════════════════════════════════════════════ -->
+  <div id="screen-incidents" class="screen bg-slate-50">
+    <div class="bg-white px-4 pt-10 pb-4 shadow-sm flex items-center justify-between">
+      <div>
+        <div class="font-bold text-lg">Incidents</div>
+        <div class="text-sm text-slate-500">Your active incidents</div>
+      </div>
+      <button onclick="loadMobileIncidents()" class="text-indigo-600 text-sm">Refresh</button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-4 py-4">
+      <div id="mobile-incidents-list" class="space-y-3"></div>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab-item" onclick="switchTab('home')"><span>🆘</span>SOS</div>
+      <div class="tab-item" onclick="switchTab('monitor')"><span>📡</span>Monitor</div>
+      <div class="tab-item active" onclick="switchTab('incidents')"><span>📋</span>Incidents</div>
+      <div class="tab-item" onclick="switchTab('profile')"><span>👤</span>Profile</div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       SCREEN: INCIDENT DETAIL (WebSocket)
+       ════════════════════════════════════════════════ -->
+  <div id="screen-incident-detail" class="screen bg-slate-50">
+    <div class="bg-white px-4 pt-10 pb-3 shadow-sm">
+      <div class="flex items-center gap-3">
+        <button onclick="switchTab('incidents'); disconnectWS()" class="text-indigo-600 text-sm">← Back</button>
+        <div class="flex-1">
+          <div class="font-bold text-sm" id="detail-title">Incident</div>
+          <div class="flex items-center gap-1.5">
+            <div class="ws-dot disconnected" id="ws-dot"></div>
+            <span class="text-xs text-slate-500" id="ws-status">Disconnected</span>
+          </div>
+        </div>
+        <button onclick="connectWS()" id="ws-connect-btn"
+          class="bg-indigo-600 text-white px-3 py-1 rounded-lg text-xs font-medium">Connect</button>
+        <button onclick="disconnectWS()" id="ws-disconnect-btn"
+          class="hidden bg-slate-200 text-slate-700 px-3 py-1 rounded-lg text-xs font-medium">Disconnect</button>
+      </div>
+    </div>
+
+    <!-- Incident Summary -->
+    <div class="px-4 pt-3 pb-2">
+      <div id="detail-summary" class="bg-white rounded-xl border p-3 text-sm"></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex border-b bg-white px-4 gap-4">
+      <button onclick="detailTab('chat')" id="dtab-chat"
+        class="detail-tab py-2 text-sm font-medium text-indigo-600 border-b-2 border-indigo-600">Chat</button>
+      <button onclick="detailTab('actions')" id="dtab-actions"
+        class="detail-tab py-2 text-sm font-medium text-slate-400">Actions</button>
+      <button onclick="detailTab('participants')" id="dtab-participants"
+        class="detail-tab py-2 text-sm font-medium text-slate-400">Participants</button>
+      <button onclick="detailTab('location')" id="dtab-location"
+        class="detail-tab py-2 text-sm font-medium text-slate-400">Location</button>
+    </div>
+
+    <!-- Chat Tab -->
+    <div id="dtab-content-chat" class="flex flex-col flex-1 min-h-0">
+      <div id="chat-messages" class="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2"
+        style="max-height: calc(100vh - 340px);">
+        <div class="text-center text-slate-400 text-xs">Connect to WebSocket to see live messages</div>
+      </div>
+      <div class="bg-white border-t px-4 py-3 flex gap-2">
+        <input id="chat-input" type="text" placeholder="Type a message..."
+          class="flex-1 bg-slate-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:bg-white" />
+        <button onclick="sendChatMessage()"
+          class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-indigo-700">Send</button>
+      </div>
+    </div>
+
+    <!-- Actions Tab -->
+    <div id="dtab-content-actions" class="hidden flex-1 overflow-y-auto px-4 py-3 space-y-2"></div>
+
+    <!-- Participants Tab -->
+    <div id="dtab-content-participants" class="hidden flex-1 overflow-y-auto px-4 py-3 space-y-2"></div>
+
+    <!-- Location Tab -->
+    <div id="dtab-content-location" class="hidden flex-1 overflow-y-auto px-4 py-3 space-y-3">
+      <div class="bg-white rounded-xl border p-4">
+        <div class="font-semibold text-sm mb-3">Share Location via WebSocket</div>
+        <div class="space-y-2">
+          <div class="flex gap-2">
+            <div class="flex-1">
+              <label class="block text-xs text-slate-500 mb-1">Latitude</label>
+              <input id="loc-lat" type="number" step="0.0001" value="37.7749"
+                class="w-full border rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <div class="flex-1">
+              <label class="block text-xs text-slate-500 mb-1">Longitude</label>
+              <input id="loc-lng" type="number" step="0.0001" value="-122.4194"
+                class="w-full border rounded-lg px-3 py-2 text-sm" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">Accuracy (m)</label>
+            <input id="loc-accuracy" type="number" value="10"
+              class="w-full border rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <button onclick="sendLocationWS()"
+            class="w-full bg-blue-600 text-white py-2.5 rounded-xl font-medium text-sm hover:bg-blue-700">
+            📍 Send Location Update
+          </button>
+          <button onclick="sendHeartbeat()"
+            class="w-full bg-slate-200 text-slate-700 py-2 rounded-xl text-sm hover:bg-slate-300">
+            💓 Send Heartbeat
+          </button>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl border p-4">
+        <div class="font-semibold text-sm mb-2">Upload Evidence</div>
+        <div class="space-y-2">
+          <input type="file" id="mobile-evidence-file" class="text-xs w-full" />
+          <select id="mobile-evidence-type" class="w-full border rounded-xl px-3 py-2 text-sm">
+            <option value="photo">Photo</option>
+            <option value="video">Video</option>
+            <option value="audio">Audio</option>
+            <option value="document">Document</option>
+          </select>
+          <button onclick="mobileUploadEvidence()"
+            class="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-medium text-sm hover:bg-indigo-700">
+            Upload Evidence
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       SCREEN: PROFILE
+       ════════════════════════════════════════════════ -->
+  <div id="screen-profile" class="screen bg-slate-50">
+    <div class="bg-white px-4 pt-10 pb-4 shadow-sm">
+      <div class="font-bold text-lg">Profile</div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      <div class="bg-white rounded-2xl shadow-sm p-4">
+        <div id="profile-info" class="space-y-2 text-sm"></div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm p-4">
+        <div class="font-semibold text-sm mb-3">Update Status</div>
+        <div class="grid grid-cols-3 gap-2">
+          <button onclick="updateStatus('active')"
+            class="bg-blue-50 text-blue-700 py-2 rounded-xl text-xs font-medium hover:bg-blue-100">Active</button>
+          <button onclick="updateStatus('on_duty')"
+            class="bg-green-50 text-green-700 py-2 rounded-xl text-xs font-medium hover:bg-green-100">On Duty</button>
+          <button onclick="updateStatus('off_duty')"
+            class="bg-slate-50 text-slate-600 py-2 rounded-xl text-xs font-medium hover:bg-slate-100">Off Duty</button>
+        </div>
+        <div id="status-update-result" class="text-xs text-slate-400 mt-2"></div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm p-4">
+        <div class="font-semibold text-sm mb-2">Token</div>
+        <div id="token-display" class="text-xs text-slate-400 break-all font-mono bg-slate-50 p-2 rounded-lg max-h-20 overflow-y-auto"></div>
+        <button onclick="copyToken()" class="text-xs text-indigo-600 hover:underline mt-1">Copy token</button>
+      </div>
+
+      <button onclick="doLogout()"
+        class="w-full border border-red-300 text-red-600 py-3 rounded-xl font-medium text-sm hover:bg-red-50">
+        Sign Out
+      </button>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab-item" onclick="switchTab('home')"><span>🆘</span>SOS</div>
+      <div class="tab-item" onclick="switchTab('monitor')"><span>📡</span>Monitor</div>
+      <div class="tab-item" onclick="switchTab('incidents')"><span>📋</span>Incidents</div>
+      <div class="tab-item active" onclick="switchTab('profile')"><span>👤</span>Profile</div>
+    </div>
+  </div>
+
+</div><!-- /phone-frame -->
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let BASE_URL = 'http://localhost:8000';
+let token = null;
+let currentUser = null;
+let selectedEmergencyType = 'generic';
+let sosHoldTimer = null;
+let sosCountdownInterval = null;
+let activeSession = null;
+let currentIncidentId = null;
+let ws = null;
+let currentTab = 'home';
+let currentDetailTab = 'chat';
+
+// ─── API Client ──────────────────────────────────────────────────────────────
+async function api(method, path, body = null, isForm = false) {
+  const headers = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  if (body && !isForm) headers['Content-Type'] = 'application/json';
+
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method,
+    headers,
+    body: isForm ? body : (body ? JSON.stringify(body) : null),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || JSON.stringify(err));
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  BASE_URL = document.getElementById('base-url').value.replace(/\/$/, '');
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.classList.add('hidden');
+  try {
+    const data = await api('POST', '/api/v1/auth/login', { email, password });
+    token = data.access_token;
+    currentUser = data.user;
+    showScreen('home');
+    updateHomeUI();
+    updateProfileUI();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.classList.remove('hidden');
+  }
+}
+
+document.getElementById('login-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+function doLogout() {
+  disconnectWS();
+  token = null;
+  currentUser = null;
+  activeSession = null;
+  showScreen('login');
+}
+
+function updateHomeUI() {
+  if (!currentUser) return;
+  document.getElementById('home-name').textContent = currentUser.name || 'User';
+  document.getElementById('home-role').textContent = currentUser.role;
+  const badge = document.getElementById('home-status-badge');
+  badge.textContent = currentUser.status || 'active';
+}
+
+function updateProfileUI() {
+  if (!currentUser) return;
+  document.getElementById('profile-info').innerHTML = `
+    <div class="flex items-center gap-3 mb-2">
+      <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-lg">
+        ${(currentUser.name || 'U')[0].toUpperCase()}
+      </div>
+      <div>
+        <div class="font-semibold">${currentUser.name}</div>
+        <div class="text-slate-500 text-xs">${currentUser.role}</div>
+      </div>
+    </div>
+    <div class="text-slate-500 text-xs">Org ID: ${currentUser.org_id?.slice(0,8) || '—'}</div>
+    <div class="text-slate-500 text-xs">User ID: ${currentUser.id?.slice(0,8) || '—'}</div>
+  `;
+  document.getElementById('token-display').textContent = token;
+}
+
+// ─── Screen Navigation ────────────────────────────────────────────────────────
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(`screen-${name}`)?.classList.add('active');
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  showScreen(tab);
+  // Update tab bar items on all screens
+  document.querySelectorAll('.tab-item').forEach(el => el.classList.remove('active'));
+
+  if (tab === 'incidents') loadMobileIncidents();
+  if (tab === 'monitor') updateMonitorUI();
+}
+
+// ─── SOS Button ──────────────────────────────────────────────────────────────
+function selectEmergencyType(type) {
+  selectedEmergencyType = type;
+  document.querySelectorAll('.etype-btn').forEach(b => {
+    b.classList.remove('border-opacity-100', 'ring-2', 'ring-indigo-400');
+  });
+  document.getElementById(`btn-${type}`)?.classList.add('ring-2', 'ring-indigo-400');
+}
+
+selectEmergencyType('generic');
+
+function startSOSHold(e) {
+  if (e) e.preventDefault();
+  const btn = document.getElementById('sos-btn');
+  const hint = document.getElementById('sos-hint');
+  const countdown = document.getElementById('sos-countdown');
+  btn.classList.add('pulsing');
+  hint.textContent = 'Keep holding...';
+
+  let remaining = 3;
+  countdown.textContent = `${remaining}s`;
+
+  sosCountdownInterval = setInterval(() => {
+    remaining -= 1;
+    countdown.textContent = remaining > 0 ? `${remaining}s` : '';
+  }, 1000);
+
+  sosHoldTimer = setTimeout(() => {
+    clearInterval(sosCountdownInterval);
+    btn.classList.remove('pulsing');
+    countdown.textContent = '';
+    hint.textContent = 'Triggering SOS...';
+    triggerSOS();
+  }, 3000);
+}
+
+function cancelSOSHold() {
+  if (sosHoldTimer) { clearTimeout(sosHoldTimer); sosHoldTimer = null; }
+  if (sosCountdownInterval) { clearInterval(sosCountdownInterval); sosCountdownInterval = null; }
+  const btn = document.getElementById('sos-btn');
+  btn.classList.remove('pulsing');
+  document.getElementById('sos-countdown').textContent = '';
+  document.getElementById('sos-hint').textContent = 'Hold for 3 seconds to trigger';
+}
+
+async function triggerSOS() {
+  const hint = document.getElementById('sos-hint');
+  try {
+    const body = {
+      emergency_type: selectedEmergencyType,
+      trigger_source: 'ui_button',
+      location: simulateLocation(),
+    };
+    const incident = await api('POST', '/api/v1/incidents', body);
+    hint.textContent = `✅ Incident ${incident.incident_number} triggered!`;
+    setTimeout(() => { hint.textContent = 'Hold for 3 seconds to trigger'; }, 3000);
+    // Open incident detail
+    openIncidentDetail(incident.id);
+  } catch (e) {
+    hint.textContent = `❌ ${e.message}`;
+    setTimeout(() => { hint.textContent = 'Hold for 3 seconds to trigger'; }, 3000);
+  }
+}
+
+function simulateLocation() {
+  return {
+    lat: 37.7749 + (Math.random() - 0.5) * 0.01,
+    lng: -122.4194 + (Math.random() - 0.5) * 0.01,
+    accuracy_m: 10,
+  };
+}
+
+// ─── MONITORING SESSION ───────────────────────────────────────────────────────
+async function startMonitoringSession() {
+  try {
+    const interval = parseInt(document.getElementById('checkin-interval').value) || 60;
+    const session = await api('POST', '/api/v1/monitoring/sessions', {
+      check_in_interval_seconds: interval,
+      metadata: { source: 'mobile_simulator' },
+    });
+    activeSession = session;
+    updateMonitorUI();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function endMonitoringSession() {
+  if (!activeSession) return;
+  try {
+    await api('POST', `/api/v1/monitoring/sessions/${activeSession.id}/end`, { reason: 'manual' });
+    activeSession = null;
+    updateMonitorUI();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+function updateMonitorUI() {
+  const badge = document.getElementById('session-badge');
+  const info = document.getElementById('session-info');
+  const startControls = document.getElementById('session-controls-start');
+  const activeControls = document.getElementById('session-controls-active');
+  const telPanel = document.getElementById('telemetry-panel');
+  const telLog = document.getElementById('telemetry-log-panel');
+
+  if (activeSession) {
+    badge.className = 'badge bg-green-100 text-green-700';
+    badge.textContent = 'Active';
+    info.textContent = `Session ID: ${activeSession.id.slice(0,8)} · Started: ${new Date(activeSession.started_at).toLocaleTimeString()}`;
+    startControls.classList.add('hidden');
+    activeControls.classList.remove('hidden');
+    telPanel.classList.remove('hidden');
+    telLog.classList.remove('hidden');
+    loadTelemetry();
+  } else {
+    badge.className = 'badge bg-slate-100 text-slate-600';
+    badge.textContent = 'No Session';
+    info.textContent = 'No active monitoring session.';
+    startControls.classList.remove('hidden');
+    activeControls.classList.add('hidden');
+    telPanel.classList.add('hidden');
+    telLog.classList.add('hidden');
+  }
+}
+
+async function submitTelemetry(eventType) {
+  if (!activeSession) return;
+  const loc = simulateLocation();
+  const eventData = {
+    location: { lat: loc.lat, lng: loc.lng, accuracy_m: loc.accuracy_m },
+    fall_detected: { severity: 'moderate', confidence: 0.87 },
+    heart_rate: { bpm: 85 + Math.floor(Math.random() * 30), quality: 'good' },
+    speed: { mph: (Math.random() * 5).toFixed(1), direction: 'NW' },
+  };
+
+  const resultEl = document.getElementById('telemetry-result');
+  try {
+    const res = await api('POST', `/api/v1/monitoring/sessions/${activeSession.id}/telemetry`, {
+      events: [{
+        event_type: eventType,
+        data: eventData[eventType] || {},
+        recorded_at: new Date().toISOString(),
+      }],
+    });
+    resultEl.textContent = `✅ Accepted: ${res.accepted}${res.escalated ? ' · ⚠️ ESCALATED to incident!' : ''}`;
+    if (res.escalated && res.incident_id) {
+      setTimeout(() => openIncidentDetail(res.incident_id), 1000);
+    }
+    loadTelemetry();
+  } catch (e) {
+    resultEl.textContent = `❌ ${e.message}`;
+  }
+}
+
+async function loadTelemetry() {
+  if (!activeSession) return;
+  const el = document.getElementById('telemetry-log');
+  try {
+    const events = await api('GET', `/api/v1/monitoring/sessions/${activeSession.id}/telemetry?limit=20`);
+    el.innerHTML = events.map(e => `
+      <div class="flex items-center justify-between text-xs border rounded-lg px-2 py-1.5">
+        <span class="font-medium text-slate-700">${e.event_type}</span>
+        <span class="text-slate-400">${new Date(e.recorded_at).toLocaleTimeString()}</span>
+      </div>
+    `).join('') || '<div class="text-slate-400 text-xs">No events yet.</div>';
+  } catch (e) {
+    el.innerHTML = `<div class="text-red-400 text-xs">${e.message}</div>`;
+  }
+}
+
+// ─── INCIDENTS (mobile) ───────────────────────────────────────────────────────
+async function loadMobileIncidents() {
+  const el = document.getElementById('mobile-incidents-list');
+  el.innerHTML = '<div class="text-slate-400 text-sm text-center py-8">Loading...</div>';
+  try {
+    const data = await api('GET', '/api/v1/incidents');
+    if (!data.length) {
+      el.innerHTML = '<div class="text-slate-400 text-sm text-center py-8">No incidents found.</div>';
+      return;
+    }
+    el.innerHTML = data.map(inc => `
+      <div onclick="openIncidentDetail('${inc.id}')"
+        class="bg-white rounded-2xl shadow-sm p-4 cursor-pointer active:bg-slate-50 transition">
+        <div class="flex items-center justify-between mb-1">
+          <div class="font-semibold text-sm">${inc.incident_number || inc.id.slice(0,8)}</div>
+          <span class="badge ${statusColor(inc.status)}">${inc.status}</span>
+        </div>
+        <div class="text-xs text-slate-500">${inc.emergency_type} · ${inc.trigger_source}</div>
+        <div class="text-xs text-slate-400 mt-1">${new Date(inc.initiated_at).toLocaleString()}</div>
+      </div>
+    `).join('');
+  } catch (e) {
+    el.innerHTML = `<div class="text-red-400 text-sm text-center py-8">${e.message}</div>`;
+  }
+}
+
+function statusColor(s) {
+  const m = {
+    triggered: 'bg-yellow-100 text-yellow-800',
+    active: 'bg-blue-100 text-blue-800',
+    resolved: 'bg-green-100 text-green-800',
+    cancelled: 'bg-slate-100 text-slate-600',
+  };
+  return m[s] || 'bg-slate-100 text-slate-600';
+}
+
+async function openIncidentDetail(id) {
+  currentIncidentId = id;
+  showScreen('incident-detail');
+  detailTab('chat');
+
+  // Disconnect any existing WS before connecting to new incident
+  disconnectWS();
+
+  try {
+    const data = await api('GET', `/api/v1/incidents/${id}`);
+    const inc = data.incident;
+    document.getElementById('detail-title').textContent = inc.incident_number || id.slice(0,8);
+    document.getElementById('detail-summary').innerHTML = `
+      <div class="flex items-center justify-between">
+        <span class="font-semibold">${inc.emergency_type}</span>
+        <span class="badge ${statusColor(inc.status)}">${inc.status}</span>
+      </div>
+      <div class="text-xs text-slate-500 mt-1">${inc.trigger_source} · Sev ${inc.severity || '?'}</div>
+    `;
+
+    renderMessages(data.messages || []);
+    renderActions(data.pending_actions || [], inc.id, inc.status);
+    renderParticipants(data.participants || []);
+
+  } catch (e) {
+    document.getElementById('detail-summary').innerHTML = `<div class="text-red-400 text-xs">${e.message}</div>`;
+  }
+
+  // Auto-connect WebSocket
+  connectWS();
+}
+
+async function refreshIncidentData() {
+  if (!currentIncidentId) return;
+  try {
+    const data = await api('GET', `/api/v1/incidents/${currentIncidentId}`);
+    const inc = data.incident;
+    document.getElementById('detail-summary').innerHTML = `
+      <div class="flex items-center justify-between">
+        <span class="font-semibold">${inc.emergency_type}</span>
+        <span class="badge ${statusColor(inc.status)}">${inc.status}</span>
+      </div>
+      <div class="text-xs text-slate-500 mt-1">${inc.trigger_source} · Sev ${inc.severity || '?'}</div>
+    `;
+    renderMessages(data.messages || []);
+    renderActions(data.pending_actions || [], inc.id, inc.status);
+    renderParticipants(data.participants || []);
+  } catch (e) { /* silently ignore refresh errors */ }
+}
+
+function renderMessages(messages) {
+  const el = document.getElementById('chat-messages');
+  if (!messages.length) {
+    el.innerHTML = '<div class="text-center text-slate-400 text-xs">No messages yet. Waiting for activity...</div>';
+    return;
+  }
+  el.innerHTML = messages.map(m => messageBubble(m)).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function messageBubble(m) {
+  const isHuman = m.sender_type === 'human';
+  const isAI = m.sender_type === 'ai';
+  const isSys = m.sender_type === 'system';
+  const cls = isHuman ? 'msg-human' : (isAI ? 'msg-ai' : 'msg-system');
+  const name = isAI ? '🤖 AI Agent' : (isHuman ? 'Human' : '');
+  return `
+    <div class="flex flex-col ${isHuman ? 'items-end' : (isSys ? 'items-center' : 'items-start')}">
+      ${name ? `<div class="text-xs text-slate-400 mb-0.5 ${isHuman ? 'mr-1' : 'ml-1'}">${name}</div>` : ''}
+      <div class="msg-bubble ${cls}">${m.content}</div>
+      <div class="text-xs text-slate-300 mt-0.5 ${isHuman ? 'mr-1' : 'ml-1'}">${new Date(m.created_at).toLocaleTimeString()}</div>
+    </div>
+  `;
+}
+
+function renderActions(actions, incidentId, incStatus) {
+  const el = document.getElementById('dtab-content-actions');
+  if (!actions.length) {
+    el.innerHTML = '<div class="text-slate-400 text-sm text-center py-8">No pending actions.</div>';
+    return;
+  }
+  el.innerHTML = actions.map(a => `
+    <div class="bg-white rounded-xl border p-3">
+      <div class="flex items-center justify-between mb-1">
+        <span class="font-medium text-sm">${a.action_type.replace(/_/g, ' ')}</span>
+        <div class="flex gap-1">
+          <span class="badge ${tierColor(a.tier)}">${a.tier}</span>
+          <span class="badge ${statusColor(a.status)}">${a.status}</span>
+        </div>
+      </div>
+      <div class="text-xs text-slate-500 mb-2">${a.description}</div>
+      ${a.status === 'pending' && (currentUser?.role === 'commander' || currentUser?.role === 'admin' || currentUser?.role === 'org_admin') ? `
+        <div class="flex gap-2">
+          <button onclick="mobileApproveAction('${incidentId}','${a.id}')"
+            class="flex-1 bg-green-600 text-white py-1.5 rounded-lg text-xs font-medium hover:bg-green-700">Approve</button>
+          <button onclick="mobileRejectAction('${incidentId}','${a.id}')"
+            class="flex-1 bg-red-500 text-white py-1.5 rounded-lg text-xs font-medium hover:bg-red-600">Reject</button>
+        </div>
+      ` : ''}
+    </div>
+  `).join('');
+
+  if (incStatus !== 'resolved' && incStatus !== 'cancelled') {
+    el.innerHTML += `
+      <button onclick="resolveCurrentIncident()"
+        class="w-full bg-green-600 text-white py-3 rounded-xl font-medium text-sm hover:bg-green-700 mt-2">
+        ✅ Resolve Incident
+      </button>
+    `;
+  }
+}
+
+function renderParticipants(participants) {
+  const el = document.getElementById('dtab-content-participants');
+  if (!participants.length) {
+    el.innerHTML = '<div class="text-slate-400 text-sm text-center py-8">No participants yet.</div>';
+    return;
+  }
+  el.innerHTML = participants.map(p => `
+    <div class="bg-white rounded-xl border p-3 flex items-center justify-between">
+      <div>
+        <div class="font-medium text-sm">${p.name} ${p.is_ai ? '🤖' : ''}</div>
+        <div class="text-xs text-slate-400">${p.role}${p.dispatch_status ? ' · ' + p.dispatch_status : ''}</div>
+      </div>
+      ${p.last_location?.lat ? `<div class="text-xs text-slate-400">${p.last_location.lat?.toFixed(4)}, ${p.last_location.lng?.toFixed(4)}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function tierColor(t) {
+  return { green: 'bg-green-100 text-green-700', amber: 'bg-yellow-100 text-yellow-800', red: 'bg-red-100 text-red-700' }[t] || 'bg-slate-100 text-slate-600';
+}
+
+async function mobileApproveAction(incidentId, actionId) {
+  try {
+    await api('POST', `/api/v1/incidents/${incidentId}/actions/${actionId}/approve`, {});
+    refreshIncidentData();
+  } catch (e) { alert(e.message); }
+}
+
+async function mobileRejectAction(incidentId, actionId) {
+  const reason = prompt('Rejection reason (optional):');
+  try {
+    await api('POST', `/api/v1/incidents/${incidentId}/actions/${actionId}/reject`, { reason: reason || '' });
+    refreshIncidentData();
+  } catch (e) { alert(e.message); }
+}
+
+async function resolveCurrentIncident() {
+  if (!currentIncidentId) return;
+  try {
+    await api('POST', `/api/v1/incidents/${currentIncidentId}/resolve`, { resolution_note: 'Resolved via mobile' });
+    refreshIncidentData();
+  } catch (e) { alert(e.message); }
+}
+
+// ─── WebSocket ─────────────────────────────────────────────────────────────────
+function setWSStatus(state) {
+  const dot = document.getElementById('ws-dot');
+  const status = document.getElementById('ws-status');
+  const connectBtn = document.getElementById('ws-connect-btn');
+  const disconnectBtn = document.getElementById('ws-disconnect-btn');
+  dot.className = `ws-dot ${state}`;
+  status.textContent = state === 'connected' ? 'Connected' : (state === 'connecting' ? 'Connecting...' : 'Disconnected');
+  if (state === 'connected') {
+    connectBtn.classList.add('hidden');
+    disconnectBtn.classList.remove('hidden');
+  } else {
+    connectBtn.classList.remove('hidden');
+    disconnectBtn.classList.add('hidden');
+  }
+}
+
+function connectWS() {
+  if (!currentIncidentId) return;
+  const wsBase = BASE_URL.replace('http://', 'ws://').replace('https://', 'wss://');
+  const url = `${wsBase}/api/v1/incidents/${currentIncidentId}/ws?token=${token}`;
+
+  setWSStatus('connecting');
+  ws = new WebSocket(url);
+
+  ws.onopen = () => {
+    setWSStatus('connected');
+    appendSystemMessage('Connected to incident channel');
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      handleWSMessage(msg);
+    } catch { }
+  };
+
+  ws.onclose = () => {
+    ws = null;
+    setWSStatus('disconnected');
+    // Auto-reconnect if still on the incident detail screen
+    if (currentIncidentId && document.getElementById('screen-incident-detail').classList.contains('active')) {
+      appendSystemMessage('Reconnecting in 3s...');
+      setTimeout(() => {
+        if (currentIncidentId && document.getElementById('screen-incident-detail').classList.contains('active')) {
+          connectWS();
+        }
+      }, 3000);
+    }
+  };
+
+  ws.onerror = () => {
+    ws = null;
+    setWSStatus('disconnected');
+  };
+}
+
+function disconnectWS() {
+  if (ws) { ws.close(); ws = null; }
+  setWSStatus('disconnected');
+}
+
+function handleWSMessage(msg) {
+  if (msg.type === 'snapshot') {
+    renderMessages(msg.messages || []);
+    renderActions(msg.pending_actions || [], currentIncidentId, msg.incident?.status);
+    renderParticipants(msg.participants || []);
+    return;
+  }
+  if (msg.type === 'participant.location') {
+    appendSystemMessage(`📍 ${msg.user_id?.slice(0,8)} updated location`);
+    return;
+  }
+  // Any other event (new message, action created/updated, incident status change, etc.)
+  // Re-fetch the full incident state from REST to keep everything in sync
+  refreshIncidentData();
+}
+
+function appendChatMessage(m) {
+  const el = document.getElementById('chat-messages');
+  el.innerHTML += messageBubble(m);
+  el.scrollTop = el.scrollHeight;
+}
+
+function appendSystemMessage(text) {
+  appendChatMessage({ sender_type: 'system', content: text, created_at: new Date().toISOString() });
+}
+
+function sendWS(data) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    alert('Not connected. Click Connect first.');
+    return false;
+  }
+  ws.send(JSON.stringify(data));
+  return true;
+}
+
+function sendHeartbeat() {
+  if (sendWS({ type: 'heartbeat' })) {
+    appendSystemMessage('Heartbeat sent');
+  }
+}
+
+function sendLocationWS() {
+  const lat = parseFloat(document.getElementById('loc-lat').value);
+  const lng = parseFloat(document.getElementById('loc-lng').value);
+  const accuracy = parseFloat(document.getElementById('loc-accuracy').value);
+  if (sendWS({ type: 'location', lat, lng, accuracy_m: accuracy })) {
+    appendSystemMessage(`📍 Location sent: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+  }
+}
+
+async function sendChatMessage() {
+  if (!currentIncidentId) return;
+  const input = document.getElementById('chat-input');
+  const content = input.value.trim();
+  if (!content) return;
+  try {
+    const msg = await api('POST', `/api/v1/incidents/${currentIncidentId}/messages`, {
+      message_type: 'text',
+      content,
+    });
+    appendChatMessage(msg);
+    input.value = '';
+  } catch (e) {
+    appendSystemMessage(`Error: ${e.message}`);
+  }
+}
+
+document.getElementById('chat-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendChatMessage();
+});
+
+// ─── Detail Tabs ─────────────────────────────────────────────────────────────
+function detailTab(tab) {
+  currentDetailTab = tab;
+  document.querySelectorAll('.detail-tab').forEach(el => {
+    el.classList.remove('text-indigo-600', 'border-b-2', 'border-indigo-600');
+    el.classList.add('text-slate-400');
+  });
+  document.getElementById(`dtab-${tab}`)?.classList.add('text-indigo-600', 'border-b-2', 'border-indigo-600');
+  document.getElementById(`dtab-${tab}`)?.classList.remove('text-slate-400');
+
+  document.querySelectorAll('[id^="dtab-content-"]').forEach(el => el.classList.add('hidden'));
+  document.getElementById(`dtab-content-${tab}`)?.classList.remove('hidden');
+}
+
+// ─── Profile ──────────────────────────────────────────────────────────────────
+async function updateStatus(status) {
+  try {
+    const user = await api('PATCH', '/api/v1/users/me', { status });
+    currentUser = { ...currentUser, status };
+    updateHomeUI();
+    document.getElementById('status-update-result').textContent = `Status updated to: ${status}`;
+  } catch (e) {
+    document.getElementById('status-update-result').textContent = `Error: ${e.message}`;
+  }
+}
+
+function copyToken() {
+  navigator.clipboard.writeText(token).then(() => {
+    alert('Token copied!');
+  }).catch(() => {
+    prompt('Copy this token:', token);
+  });
+}
+
+// ─── Mobile Evidence Upload ───────────────────────────────────────────────────
+async function mobileUploadEvidence() {
+  if (!currentIncidentId) return;
+  const fileEl = document.getElementById('mobile-evidence-file');
+  const typeEl = document.getElementById('mobile-evidence-type');
+  if (!fileEl.files[0]) { alert('Select a file first'); return; }
+  const fd = new FormData();
+  fd.append('file', fileEl.files[0]);
+  fd.append('file_type', typeEl.value);
+  try {
+    await api('POST', `/api/v1/incidents/${currentIncidentId}/evidence`, fd, true);
+    alert('Evidence uploaded successfully!');
+  } catch (e) {
+    alert(e.message);
+  }
+}
+</script>
+</body>
+</html>

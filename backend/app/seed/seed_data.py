@@ -34,13 +34,29 @@ async def run_seed():
                 medical_flags=[],
             )
             db.add(super_admin)
-            await db.flush()
             logger.info(f"Super admin created: {SUPER_ADMIN_EMAIL}")
 
         # Check if Sunrise org already seeded
         result = await db.execute(select(Organization).where(Organization.slug == "sunrise"))
-        if result.scalar_one_or_none():
-            logger.info("Seed data already present — skipping")
+        org = result.scalar_one_or_none()
+        if org:
+            # Ensure org_admin exists for Sunrise (idempotent)
+            oa_result = await db.execute(select(User).where(User.email == "orgadmin@sunrise.demo"))
+            if not oa_result.scalar_one_or_none():
+                db.add(User(
+                    org_id=org.id,
+                    email="orgadmin@sunrise.demo",
+                    password_hash=hash_password(DEFAULT_PASSWORD),
+                    name="Sunrise Org Admin",
+                    phone="512-555-0100",
+                    role="org_admin",
+                    status="active",
+                    qualifications=[],
+                    medical_flags=[],
+                ))
+                logger.info("Org admin created: orgadmin@sunrise.demo")
+            await db.commit()
+            logger.info("Seed data already present — skipping full seed")
             return
 
         logger.info("Seeding demo data...")

@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mantle EMS — Web Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .sidebar-item { @apply flex items-center gap-2 px-3 py-2 rounded-lg text-sm cursor-pointer transition-colors; }
+    .badge { @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium; }
+    pre { white-space: pre-wrap; word-break: break-all; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen text-gray-900">
+
+<!-- LOGIN SCREEN -->
+<div id="screen-login" class="min-h-screen flex items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm">
+    <div class="mb-6 text-center">
+      <div class="text-2xl font-bold text-indigo-700">Mantle EMS</div>
+      <div class="text-sm text-gray-500 mt-1">Admin Web Interface</div>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">API Base URL</label>
+        <input id="base-url" type="text" value="http://localhost:8000"
+          class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Email</label>
+        <input id="login-email" type="email" placeholder="admin@example.com"
+          class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Password</label>
+        <input id="login-password" type="password" placeholder="••••••••"
+          class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+      </div>
+      <div id="login-error" class="text-red-500 text-sm hidden"></div>
+      <button onclick="doLogin()"
+        class="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition">
+        Sign In
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="screen-app" class="hidden flex h-screen overflow-hidden">
+  <!-- Sidebar -->
+  <aside class="w-56 bg-white border-r flex flex-col py-4 shrink-0">
+    <div class="px-4 mb-4">
+      <div class="font-bold text-indigo-700 text-lg">Mantle EMS</div>
+      <div id="user-info" class="text-xs text-gray-400 mt-0.5 truncate"></div>
+    </div>
+    <nav class="flex-1 px-2 space-y-1">
+      <div onclick="showSection('incidents')" id="nav-incidents" class="sidebar-item text-gray-700 hover:bg-indigo-50 hover:text-indigo-700">
+        📋 Incidents
+      </div>
+      <div onclick="showSection('users')" id="nav-users" class="sidebar-item text-gray-700 hover:bg-indigo-50 hover:text-indigo-700">
+        👥 Users
+      </div>
+      <div onclick="showSection('facilities')" id="nav-facilities" class="sidebar-item text-gray-700 hover:bg-indigo-50 hover:text-indigo-700">
+        🏢 Facilities
+      </div>
+      <div onclick="showSection('sops')" id="nav-sops" class="sidebar-item text-gray-700 hover:bg-indigo-50 hover:text-indigo-700">
+        📄 SOPs
+      </div>
+      <div onclick="showSection('orgs')" id="nav-orgs" class="sidebar-item text-gray-700 hover:bg-indigo-50 hover:text-indigo-700">
+        🏛️ Orgs
+      </div>
+      <div onclick="showSection('monitoring')" id="nav-monitoring" class="sidebar-item text-gray-700 hover:bg-indigo-50 hover:text-indigo-700">
+        📡 Monitoring
+      </div>
+      <div onclick="showSection('audit')" id="nav-audit" class="sidebar-item text-gray-700 hover:bg-indigo-50 hover:text-indigo-700">
+        🔍 Audit Log
+      </div>
+      <div onclick="showSection('search')" id="nav-search" class="sidebar-item text-gray-700 hover:bg-indigo-50 hover:text-indigo-700">
+        🔎 Search
+      </div>
+    </nav>
+    <div class="px-2 mt-4">
+      <button onclick="doLogout()"
+        class="w-full text-sm text-gray-500 hover:text-red-600 py-2 text-left px-3 rounded-lg hover:bg-red-50 transition">
+        ↩ Sign Out
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="flex-1 overflow-auto bg-gray-50">
+
+    <!-- INCIDENTS -->
+    <section id="section-incidents" class="hidden p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold">Incidents</h2>
+        <button onclick="openModal('create-incident')"
+          class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
+          + Create Incident
+        </button>
+      </div>
+      <div class="mb-4 flex gap-2">
+        <select id="incident-status-filter" onchange="loadIncidents()"
+          class="border rounded-lg px-3 py-1.5 text-sm">
+          <option value="">All Statuses</option>
+          <option value="triggered">Triggered</option>
+          <option value="active">Active</option>
+          <option value="resolved">Resolved</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <button onclick="loadIncidents()" class="text-sm text-indigo-600 hover:underline px-2">Refresh</button>
+      </div>
+      <div id="incidents-list" class="space-y-3"></div>
+    </section>
+
+    <!-- INCIDENT DETAIL -->
+    <section id="section-incident-detail" class="hidden p-6">
+      <button onclick="showSection('incidents')" class="text-sm text-indigo-600 hover:underline mb-4 inline-block">
+        ← Back to Incidents
+      </button>
+      <div id="incident-detail-content"></div>
+    </section>
+
+    <!-- USERS -->
+    <section id="section-users" class="hidden p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold">Users</h2>
+        <button onclick="openModal('create-user')"
+          class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
+          + Create User
+        </button>
+      </div>
+      <div class="mb-4 flex gap-2">
+        <select id="user-role-filter" onchange="loadUsers()" class="border rounded-lg px-3 py-1.5 text-sm">
+          <option value="">All Roles</option>
+          <option value="super_admin">Super Admin</option>
+          <option value="org_admin">Org Admin</option>
+          <option value="admin">Admin</option>
+          <option value="commander">Commander</option>
+          <option value="supervisor">Supervisor</option>
+          <option value="worker">Worker</option>
+          <option value="responder">Responder</option>
+        </select>
+        <button onclick="loadUsers()" class="text-sm text-indigo-600 hover:underline px-2">Refresh</button>
+      </div>
+      <div id="users-list" class="space-y-2"></div>
+    </section>
+
+    <!-- FACILITIES -->
+    <section id="section-facilities" class="hidden p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold">Facilities</h2>
+        <button onclick="openModal('create-facility')"
+          class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
+          + Add Facility
+        </button>
+      </div>
+      <button onclick="loadFacilities()" class="text-sm text-indigo-600 hover:underline mb-4 inline-block">Refresh</button>
+      <div id="facilities-list" class="space-y-2"></div>
+    </section>
+
+    <!-- SOPS -->
+    <section id="section-sops" class="hidden p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold">SOPs</h2>
+        <button onclick="openModal('create-sop')"
+          class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
+          + Create SOP
+        </button>
+      </div>
+      <div class="mb-4 flex gap-2">
+        <select id="sop-type-filter" onchange="loadSOPs()" class="border rounded-lg px-3 py-1.5 text-sm">
+          <option value="">All Types</option>
+          <option value="workplace_violence">Workplace Violence</option>
+          <option value="medical">Medical</option>
+          <option value="other">Other</option>
+          <option value="generic">Generic</option>
+        </select>
+        <button onclick="loadSOPs()" class="text-sm text-indigo-600 hover:underline px-2">Refresh</button>
+      </div>
+      <div id="sops-list" class="space-y-2"></div>
+    </section>
+
+    <!-- SOP DETAIL -->
+    <section id="section-sop-detail" class="hidden p-6">
+      <button onclick="showSection('sops')" class="text-sm text-indigo-600 hover:underline mb-4 inline-block">
+        ← Back to SOPs
+      </button>
+      <div id="sop-detail-content"></div>
+    </section>
+
+    <!-- ORGS -->
+    <section id="section-orgs" class="hidden p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold">Organizations</h2>
+        <button onclick="openModal('create-org')"
+          class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
+          + Create Org
+        </button>
+      </div>
+      <button onclick="loadOrgs()" class="text-sm text-indigo-600 hover:underline mb-4 inline-block">Refresh</button>
+      <div id="orgs-list" class="space-y-2"></div>
+    </section>
+
+    <!-- MONITORING -->
+    <section id="section-monitoring" class="hidden p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold">Monitoring Sessions</h2>
+        <button onclick="loadMonitoringSessions()" class="text-sm text-indigo-600 hover:underline">Refresh</button>
+      </div>
+      <div class="mb-4">
+        <select id="monitoring-status-filter" onchange="loadMonitoringSessions()" class="border rounded-lg px-3 py-1.5 text-sm">
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="ended">Ended</option>
+          <option value="escalated">Escalated</option>
+          <option value="panic">Panic</option>
+        </select>
+      </div>
+      <div id="monitoring-list" class="space-y-2"></div>
+    </section>
+
+    <!-- AUDIT LOG -->
+    <section id="section-audit" class="hidden p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold">Audit Log</h2>
+        <button onclick="loadAuditLog()" class="text-sm text-indigo-600 hover:underline">Refresh</button>
+      </div>
+      <div class="mb-4 flex gap-2 flex-wrap">
+        <input id="audit-incident-filter" type="text" placeholder="Incident ID..."
+          class="border rounded-lg px-3 py-1.5 text-sm w-72" />
+        <select id="audit-type-filter" class="border rounded-lg px-3 py-1.5 text-sm">
+          <option value="">All Event Types</option>
+          <option value="incident.created">incident.created</option>
+          <option value="incident.resolved">incident.resolved</option>
+          <option value="action.approved">action.approved</option>
+          <option value="action.rejected">action.rejected</option>
+          <option value="evidence.uploaded">evidence.uploaded</option>
+          <option value="dispatch.accepted">dispatch.accepted</option>
+          <option value="dispatch.declined">dispatch.declined</option>
+          <option value="sop.step_executed">sop.step_executed</option>
+          <option value="user.sos_triggered">user.sos_triggered</option>
+          <option value="user.status_changed">user.status_changed</option>
+          <option value="911.contacted">911.contacted</option>
+        </select>
+        <button onclick="loadAuditLog()"
+          class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm">Search</button>
+      </div>
+      <div id="audit-list" class="space-y-2"></div>
+      <div id="audit-pagination" class="mt-4 flex gap-2 items-center"></div>
+    </section>
+
+    <!-- SEARCH -->
+    <section id="section-search" class="hidden p-6">
+      <h2 class="text-xl font-semibold mb-4">Search</h2>
+      <div class="flex gap-2 mb-4">
+        <input id="search-query" type="text" placeholder="Search incidents, messages..."
+          class="border rounded-lg px-3 py-2 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+        <select id="search-type" class="border rounded-lg px-3 py-1.5 text-sm">
+          <option value="">All Types</option>
+          <option value="workplace_violence">Workplace Violence</option>
+          <option value="medical">Medical</option>
+          <option value="other">Other</option>
+          <option value="generic">Generic</option>
+        </select>
+        <button onclick="doSearch()"
+          class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium">Search</button>
+      </div>
+      <div id="search-results"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- MODALS -->
+<div id="modal-overlay" class="hidden fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <div class="p-6" id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let BASE_URL = 'http://localhost:8000';
+let token = null;
+let currentUser = null;
+let currentSection = null;
+let auditPage = 1;
+let ws = null;
+let wsIncidentId = null;
+let pollInterval = null;
+
+// ─── API Client ──────────────────────────────────────────────────────────────
+async function api(method, path, body = null, isForm = false) {
+  const headers = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  if (body && !isForm) headers['Content-Type'] = 'application/json';
+
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method,
+    headers,
+    body: isForm ? body : (body ? JSON.stringify(body) : null),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || JSON.stringify(err));
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  BASE_URL = document.getElementById('base-url').value.replace(/\/$/, '');
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.classList.add('hidden');
+  try {
+    const data = await api('POST', '/api/v1/auth/login', { email, password });
+    token = data.access_token;
+    currentUser = data.user;
+    document.getElementById('user-info').textContent = `${currentUser.name} · ${currentUser.role}`;
+    document.getElementById('screen-login').classList.add('hidden');
+    document.getElementById('screen-app').classList.remove('hidden');
+    showSection('incidents');
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.classList.remove('hidden');
+  }
+}
+
+document.getElementById('login-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+function doLogout() {
+  disconnectWSWeb();
+  stopPoll();
+  token = null;
+  currentUser = null;
+  document.getElementById('screen-app').classList.add('hidden');
+  document.getElementById('screen-login').classList.remove('hidden');
+}
+
+// ─── Navigation ──────────────────────────────────────────────────────────────
+function showSection(name) {
+  // Disconnect WS and stop polling when leaving incident detail
+  if (currentSection === 'incident-detail' && name !== 'incident-detail') {
+    disconnectWSWeb();
+  }
+  stopPoll();
+
+  document.querySelectorAll('[id^="section-"]').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('[id^="nav-"]').forEach(el => {
+    el.classList.remove('bg-indigo-50', 'text-indigo-700', 'font-medium');
+  });
+  document.getElementById(`section-${name}`)?.classList.remove('hidden');
+  document.getElementById(`nav-${name}`)?.classList.add('bg-indigo-50', 'text-indigo-700', 'font-medium');
+  currentSection = name;
+
+  const loaders = {
+    incidents: loadIncidents,
+    users: loadUsers,
+    facilities: loadFacilities,
+    sops: loadSOPs,
+    orgs: loadOrgs,
+    monitoring: loadMonitoringSessions,
+    audit: loadAuditLog,
+  };
+  loaders[name]?.();
+
+  // Start auto-polling for live-updating sections
+  if (name === 'incidents') {
+    pollInterval = setInterval(loadIncidents, 10000);
+  } else if (name === 'monitoring') {
+    pollInterval = setInterval(loadMonitoringSessions, 15000);
+  }
+}
+
+function stopPoll() {
+  if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function statusBadge(status) {
+  const colors = {
+    triggered: 'bg-yellow-100 text-yellow-800',
+    active: 'bg-blue-100 text-blue-800',
+    resolved: 'bg-green-100 text-green-800',
+    cancelled: 'bg-gray-100 text-gray-600',
+    pending: 'bg-orange-100 text-orange-800',
+    approved: 'bg-green-100 text-green-800',
+    rejected: 'bg-red-100 text-red-800',
+    executed: 'bg-indigo-100 text-indigo-800',
+    failed: 'bg-red-100 text-red-800',
+    expired: 'bg-gray-100 text-gray-600',
+    on_duty: 'bg-green-100 text-green-800',
+    off_duty: 'bg-gray-100 text-gray-600',
+    active: 'bg-blue-100 text-blue-800',
+    inactive: 'bg-gray-100 text-gray-600',
+  };
+  const color = colors[status] || 'bg-gray-100 text-gray-600';
+  return `<span class="badge ${color}">${status}</span>`;
+}
+
+function tierBadge(tier) {
+  const colors = { green: 'bg-green-100 text-green-800', amber: 'bg-yellow-100 text-yellow-800', red: 'bg-red-100 text-red-800' };
+  return `<span class="badge ${colors[tier] || 'bg-gray-100 text-gray-600'}">${tier}</span>`;
+}
+
+function fmtTime(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString();
+}
+
+function card(content, clickFn = null) {
+  const click = clickFn ? `onclick="${clickFn}"` : '';
+  const hover = clickFn ? 'cursor-pointer hover:shadow-md' : '';
+  return `<div ${click} class="bg-white rounded-xl border p-4 transition-shadow ${hover}">${content}</div>`;
+}
+
+function errHtml(msg) {
+  return `<div class="text-red-500 text-sm p-4 bg-red-50 rounded-xl">${msg}</div>`;
+}
+
+// ─── INCIDENTS ───────────────────────────────────────────────────────────────
+async function loadIncidents() {
+  const el = document.getElementById('incidents-list');
+  el.innerHTML = '<div class="text-gray-400 text-sm">Loading...</div>';
+  try {
+    const status = document.getElementById('incident-status-filter').value;
+    const path = status ? `/api/v1/incidents?status=${status}` : '/api/v1/incidents';
+    const data = await api('GET', path);
+    if (!data.length) { el.innerHTML = '<div class="text-gray-400 text-sm">No incidents found.</div>'; return; }
+    el.innerHTML = data.map(inc => card(`
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="font-semibold text-sm">${inc.incident_number || inc.id.slice(0,8)}</div>
+          <div class="text-xs text-gray-500 mt-0.5">${inc.emergency_type} · ${fmtTime(inc.initiated_at)}</div>
+        </div>
+        <div class="flex gap-2 items-center">
+          ${statusBadge(inc.status)}
+          <span class="text-xs text-gray-400">Sev ${inc.severity || '—'}</span>
+        </div>
+      </div>
+      <div class="text-xs text-gray-500 mt-1">Trigger: ${inc.trigger_source}</div>
+    `, `loadIncidentDetail('${inc.id}')`)).join('');
+  } catch (e) {
+    el.innerHTML = errHtml(e.message);
+  }
+}
+
+async function loadIncidentDetail(id) {
+  showSection('incident-detail');
+  document.getElementById('nav-incidents').classList.add('bg-indigo-50', 'text-indigo-700', 'font-medium');
+  const el = document.getElementById('incident-detail-content');
+  el.innerHTML = '<div class="text-gray-400 text-sm">Loading...</div>';
+  try {
+    const data = await api('GET', `/api/v1/incidents/${id}`);
+    const inc = data.incident;
+    el.innerHTML = `
+      <div class="space-y-4">
+        <div class="bg-white rounded-xl border p-4">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="text-lg font-bold">${inc.incident_number || inc.id.slice(0,8)}</div>
+              <div class="text-sm text-gray-500">${inc.emergency_type} · ${inc.trigger_source}</div>
+            </div>
+            <div class="flex gap-2 items-center">
+              <span id="web-ws-status" class="text-xs font-medium text-gray-400">○ Offline</span>
+              <span id="incident-status-${inc.id}">${statusBadge(inc.status)}</span>
+              ${inc.status !== 'resolved' && inc.status !== 'cancelled' ? `
+                <button onclick="resolveIncident('${inc.id}')"
+                  class="bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-green-700">
+                  Resolve
+                </button>` : ''}
+            </div>
+          </div>
+          <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-600">
+            <div><span class="font-medium">Initiated:</span> ${fmtTime(inc.initiated_at)}</div>
+            <div><span class="font-medium">Resolved:</span> ${fmtTime(inc.resolved_at)}</div>
+            <div><span class="font-medium">Severity:</span> ${inc.severity || '—'}</div>
+            <div><span class="font-medium">SOP:</span> ${inc.sop_id ? inc.sop_id.slice(0,8) : '—'}</div>
+          </div>
+          ${inc.location ? `<div class="mt-2 text-xs text-gray-500">Location: ${JSON.stringify(inc.location)}</div>` : ''}
+        </div>
+
+        <!-- Participants -->
+        <div class="bg-white rounded-xl border p-4">
+          <div class="font-semibold text-sm mb-2">Participants (${data.participants?.length || 0})</div>
+          <div id="participants-${inc.id}" class="space-y-1">
+            ${(data.participants || []).map(p => `
+              <div class="flex items-center justify-between text-xs">
+                <span class="${p.is_ai ? 'text-purple-600' : 'text-gray-700'}">${p.name} ${p.is_ai ? '🤖' : ''}</span>
+                <span class="text-gray-400">${p.role}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="bg-white rounded-xl border p-4">
+          <div id="actions-count-${inc.id}" class="font-semibold text-sm mb-2">Pending Actions (${(data.pending_actions || []).length})</div>
+          <div id="actions-list-${inc.id}" class="space-y-2">
+            ${(data.pending_actions || []).map(a => `
+              <div class="border rounded-lg p-3 text-xs">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-medium">${a.action_type}</span>
+                  <div class="flex gap-1">${tierBadge(a.tier)} ${statusBadge(a.status)}</div>
+                </div>
+                <div class="text-gray-500">${a.description}</div>
+                ${a.status === 'pending' ? `
+                  <div class="flex gap-2 mt-2">
+                    <button onclick="approveAction('${inc.id}','${a.id}')"
+                      class="bg-green-600 text-white px-2 py-0.5 rounded text-xs hover:bg-green-700">Approve</button>
+                    <button onclick="rejectAction('${inc.id}','${a.id}')"
+                      class="bg-red-500 text-white px-2 py-0.5 rounded text-xs hover:bg-red-600">Reject</button>
+                  </div>` : ''}
+              </div>
+            `).join('') || '<div class="text-gray-400">No pending actions.</div>'}
+          </div>
+          <button onclick="loadAllActions('${inc.id}')" class="text-xs text-indigo-600 hover:underline mt-2">Load all actions</button>
+          <div id="all-actions-${inc.id}"></div>
+        </div>
+
+        <!-- Messages -->
+        <div class="bg-white rounded-xl border p-4">
+          <div class="font-semibold text-sm mb-2">Messages</div>
+          <div id="messages-${inc.id}" class="space-y-2 max-h-64 overflow-y-auto mb-3">
+            ${(data.messages || []).map(m => messageHtml(m)).join('') || '<div class="text-gray-400 text-xs">No messages yet.</div>'}
+          </div>
+          <div class="flex gap-2">
+            <input id="msg-input-${inc.id}" type="text" placeholder="Type a message..."
+              class="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+            <select id="msg-type-${inc.id}" class="border rounded-lg px-2 text-sm">
+              <option value="text">Text</option>
+              <option value="status_update">Status Update</option>
+              <option value="command_transfer">Command Transfer</option>
+            </select>
+            <button onclick="sendMessage('${inc.id}')"
+              class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-indigo-700">Send</button>
+          </div>
+        </div>
+
+        <!-- Evidence -->
+        <div class="bg-white rounded-xl border p-4">
+          <div class="font-semibold text-sm mb-2">Evidence</div>
+          <button onclick="loadEvidence('${inc.id}')" class="text-xs text-indigo-600 hover:underline mb-2 block">Load evidence</button>
+          <div id="evidence-${inc.id}"></div>
+          <div class="mt-3 flex gap-2 items-center">
+            <input type="file" id="evidence-file-${inc.id}" class="text-xs" />
+            <select id="evidence-type-${inc.id}" class="border rounded-lg px-2 py-1 text-xs">
+              <option value="photo">Photo</option>
+              <option value="video">Video</option>
+              <option value="audio">Audio</option>
+              <option value="document">Document</option>
+            </select>
+            <button onclick="uploadEvidence('${inc.id}')"
+              class="bg-indigo-600 text-white px-3 py-1 rounded-lg text-xs hover:bg-indigo-700">Upload</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Auto-connect WebSocket for live updates
+    connectWSWeb(inc.id);
+
+  } catch (e) {
+    el.innerHTML = errHtml(e.message);
+  }
+}
+
+function messageHtml(m) {
+  const isAI = m.sender_type === 'ai';
+  const isSys = m.sender_type === 'system';
+  return `
+    <div class="text-xs ${isSys ? 'text-center text-gray-400 italic' : ''}">
+      ${!isSys ? `<span class="font-medium ${isAI ? 'text-purple-600' : 'text-gray-700'}">${m.sender_type === 'ai' ? '🤖 AI' : 'Human'}</span>
+      <span class="text-gray-400 ml-1">${fmtTime(m.created_at)}</span>` : ''}
+      <div class="${isSys ? '' : 'mt-0.5 text-gray-600'}">${m.content}</div>
+    </div>
+  `;
+}
+
+async function sendMessage(incidentId) {
+  const input = document.getElementById(`msg-input-${incidentId}`);
+  const typeEl = document.getElementById(`msg-type-${incidentId}`);
+  const content = input.value.trim();
+  if (!content) return;
+  try {
+    const msg = await api('POST', `/api/v1/incidents/${incidentId}/messages`, {
+      message_type: typeEl.value,
+      content,
+    });
+    const container = document.getElementById(`messages-${incidentId}`);
+    container.innerHTML += messageHtml(msg);
+    container.scrollTop = container.scrollHeight;
+    input.value = '';
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function resolveIncident(id) {
+  const note = prompt('Resolution note (optional):');
+  try {
+    await api('POST', `/api/v1/incidents/${id}/resolve`, { resolution_note: note || '' });
+    refreshIncidentDetailData(id);
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function approveAction(incidentId, actionId) {
+  try {
+    await api('POST', `/api/v1/incidents/${incidentId}/actions/${actionId}/approve`, {});
+    refreshIncidentDetailData(incidentId);
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function rejectAction(incidentId, actionId) {
+  const reason = prompt('Rejection reason (optional):');
+  try {
+    await api('POST', `/api/v1/incidents/${incidentId}/actions/${actionId}/reject`, { reason: reason || '' });
+    refreshIncidentDetailData(incidentId);
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function loadAllActions(incidentId) {
+  const el = document.getElementById(`all-actions-${incidentId}`);
+  try {
+    const actions = await api('GET', `/api/v1/incidents/${incidentId}/actions`);
+    el.innerHTML = `<div class="mt-2 space-y-1">${actions.map(a => `
+      <div class="flex items-center justify-between text-xs border rounded px-2 py-1">
+        <span>${a.action_type}</span>
+        <div class="flex gap-1">${tierBadge(a.tier)} ${statusBadge(a.status)}</div>
+      </div>
+    `).join('')}</div>`;
+  } catch (e) {
+    el.innerHTML = errHtml(e.message);
+  }
+}
+
+async function loadEvidence(incidentId) {
+  const el = document.getElementById(`evidence-${incidentId}`);
+  try {
+    const items = await api('GET', `/api/v1/incidents/${incidentId}/evidence`);
+    if (!items.length) { el.innerHTML = '<div class="text-xs text-gray-400">No evidence uploaded.</div>'; return; }
+    el.innerHTML = `<div class="space-y-1">${items.map(e => `
+      <div class="flex items-center justify-between text-xs border rounded px-2 py-1">
+        <span>${e.file_name}</span>
+        <span class="text-gray-400">${e.file_type} · ${(e.file_size_bytes / 1024).toFixed(1)}KB</span>
+      </div>
+    `).join('')}</div>`;
+  } catch (e) {
+    el.innerHTML = errHtml(e.message);
+  }
+}
+
+async function uploadEvidence(incidentId) {
+  const fileEl = document.getElementById(`evidence-file-${incidentId}`);
+  const typeEl = document.getElementById(`evidence-type-${incidentId}`);
+  if (!fileEl.files[0]) { alert('Select a file first'); return; }
+  const fd = new FormData();
+  fd.append('file', fileEl.files[0]);
+  fd.append('file_type', typeEl.value);
+  try {
+    await api('POST', `/api/v1/incidents/${incidentId}/evidence`, fd, true);
+    loadEvidence(incidentId);
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+// ─── USERS ───────────────────────────────────────────────────────────────────
+async function loadUsers() {
+  const el = document.getElementById('users-list');
+  el.innerHTML = '<div class="text-gray-400 text-sm">Loading...</div>';
+  try {
+    const role = document.getElementById('user-role-filter').value;
+    const path = role ? `/api/v1/users?role=${role}` : '/api/v1/users';
+    const data = await api('GET', path);
+    if (!data.length) { el.innerHTML = '<div class="text-gray-400 text-sm">No users found.</div>'; return; }
+    el.innerHTML = data.map(u => card(`
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="font-medium text-sm">${u.name}</div>
+          <div class="text-xs text-gray-500">${u.email} · ${u.phone || '—'}</div>
+        </div>
+        <div class="flex gap-2">
+          <span class="badge bg-indigo-100 text-indigo-700">${u.role}</span>
+          ${statusBadge(u.status)}
+        </div>
+      </div>
+    `)).join('');
+  } catch (e) {
+    el.innerHTML = errHtml(e.message);
+  }
+}
+
+// ─── FACILITIES ───────────────────────────────────────────────────────────────
+async function loadFacilities() {
+  const el = document.getElementById('facilities-list');
+  el.innerHTML = '<div class="text-gray-400 text-sm">Loading...</div>';
+  try {
+    const data = await api('GET', '/api/v1/facilities');
+    if (!data.length) { el.innerHTML = '<div class="text-gray-400 text-sm">No facilities found.</div>'; return; }
+    el.innerHTML = data.map(f => card(`
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="font-medium text-sm">${f.name}</div>
+          <div class="text-xs text-gray-500">${f.facility_type} · ${f.cell_coverage} signal</div>
+        </div>
+        <span class="badge bg-gray-100 text-gray-600">${f.facility_type}</span>
+      </div>
+      ${f.risk_flags?.length ? `<div class="text-xs text-orange-600 mt-1">⚠ ${f.risk_flags.join(', ')}</div>` : ''}
+    `)).join('');
+  } catch (e) {
+    el.innerHTML = errHtml(e.message);
+  }
+}
+
+// ─── SOPs ─────────────────────────────────────────────────────────────────────
+async function loadSOPs() {
+  const el = document.getElementById('sops-list');
+  el.innerHTML = '<div class="text-gray-400 text-sm">Loading...</div>';
+  try {
+    const type = document.getElementById('sop-type-filter').value;
+    const path = type ? `/api/v1/sops?emergency_type=${type}` : '/api/v1/sops';
+    const data = await api('GET', path);
+    if (!data.length) { el.innerHTML = '<div class="text-gray-400 text-sm">No SOPs found.</div>'; return; }
+    el.innerHTML = data.map(s => card(`
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="font-medium text-sm">${s.name} <span class="text-gray-400 font-mono text-xs">${s.sop_code}</span></div>
+          <div class="text-xs text-gray-500">${s.emergency_type} · ${s.steps?.length || 0} steps</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="badge ${s.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">${s.is_active ? 'Active' : 'Inactive'}</span>
+          <span class="text-xs text-indigo-600">Edit →</span>
+        </div>
+      </div>
+      ${s.description ? `<div class="text-xs text-gray-500 mt-1">${s.description}</div>` : ''}
+    `, `openSOPDetail('${s.id}')`)).join('');
+  } catch (e) {
+    el.innerHTML = errHtml(e.message);
+  }
+}
+
+// Working copy of steps for the currently open SOP
+let sopDraft = null;
+
+async function openSOPDetail(id) {
+  showSection('sop-detail');
+  document.getElementById('nav-sops').classList.add('bg-indigo-50', 'text-indigo-700', 'font-medium');
+  const el = document.getElementById('sop-detail-content');
+  el.innerHTML = '<div class="text-gray-400 text-sm">Loading...</div>';
+  try {
+    const sop = await api('GET', `/api/v1/sops/${id}`);
+    sopDraft = { id: sop.id, steps: JSON.parse(JSON.stringify(sop.steps || [])) };
+    renderSOPDetail(sop);
+  } catch (e) {
+    el.innerHTML = errHtml(e.message);
+  }
+}
+
+function renderSOPDetail(sop) {
+  const el = document.getElementById('sop-detail-content');
+  el.innerHTML = `
+    <div class="space-y-4">
+      <!-- Header -->
+      <div class="bg-white rounded-xl border p-4 flex items-start justify-between">
+        <div>
+          <div class="text-lg font-bold">${sop.name}
+            <span class="font-mono text-sm text-gray-400 ml-1">${sop.sop_code}</span>
+          </div>
+          <div class="text-sm text-gray-500 mt-0.5">${sop.emergency_type}${sop.description ? ' · ' + sop.description : ''}</div>
+        </div>
+        <span class="badge ${sop.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">${sop.is_active ? 'Active' : 'Inactive'}</span>
+      </div>
+
+      <!-- Steps -->
+      <div class="bg-white rounded-xl border p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="font-semibold text-sm">Steps <span id="sop-step-count" class="text-gray-400 font-normal">(${(sop.steps || []).length})</span></div>
+          <button onclick="openStepModal(null)"
+            class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-indigo-700">
+            + Add Step
+          </button>
+        </div>
+        <div id="sop-steps-list" class="space-y-2">
+          ${renderStepsList(sop.steps || [])}
+        </div>
+        <div id="sop-save-status" class="text-xs text-gray-400 mt-3"></div>
+      </div>
+
+      <!-- Responder Checklist -->
+      <div class="bg-white rounded-xl border p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="font-semibold text-sm">Responder Checklist
+            <span class="text-gray-400 font-normal">(${(sop.responder_checklist || []).length})</span>
+          </div>
+        </div>
+        <div class="space-y-1">
+          ${(sop.responder_checklist || []).map(c => `
+            <div class="flex items-center gap-2 text-sm text-gray-700">
+              <span class="text-gray-400 text-xs w-5 text-right shrink-0">${c.step}.</span>
+              <span>${c.text}</span>
+            </div>
+          `).join('') || '<div class="text-xs text-gray-400">No checklist items.</div>'}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderStepsList(steps) {
+  if (!steps.length) return '<div class="text-xs text-gray-400">No steps yet. Add one above.</div>';
+  return steps.map((s, i) => `
+    <div class="border rounded-lg p-3 text-sm" id="step-row-${i}">
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex items-start gap-3 flex-1 min-w-0">
+          <div class="flex flex-col items-center gap-1 shrink-0">
+            <span class="bg-indigo-100 text-indigo-700 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">${s.step}</span>
+            ${i > 0 ? `<button onclick="moveStep(${i}, -1)" title="Move up" class="text-gray-300 hover:text-gray-600 text-xs leading-none">▲</button>` : '<span class="w-4"></span>'}
+            ${i < sopDraft.steps.length - 1 ? `<button onclick="moveStep(${i}, 1)" title="Move down" class="text-gray-300 hover:text-gray-600 text-xs leading-none">▼</button>` : '<span class="w-4"></span>'}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-medium text-gray-800">${s.action}</span>
+              ${s.auto ? '<span class="badge bg-blue-100 text-blue-700">auto</span>' : '<span class="badge bg-gray-100 text-gray-500">manual</span>'}
+              ${s.tier ? tierBadge(s.tier) : ''}
+              ${s.target_time_sec ? `<span class="text-xs text-gray-400">⏱ ${s.target_time_sec}s</span>` : ''}
+            </div>
+            <div class="text-xs text-gray-500 mt-0.5">Actor: <span class="font-medium">${s.actor}</span></div>
+            ${s.description ? `<div class="text-xs text-gray-400 mt-0.5">${s.description}</div>` : ''}
+          </div>
+        </div>
+        <div class="flex gap-1 shrink-0">
+          <button onclick="openStepModal(${i})"
+            class="text-xs text-indigo-600 hover:text-indigo-800 px-2 py-1 rounded hover:bg-indigo-50">Edit</button>
+          <button onclick="deleteStep(${i})"
+            class="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50">Delete</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function reRenderSteps() {
+  document.getElementById('sop-steps-list').innerHTML = renderStepsList(sopDraft.steps);
+  document.getElementById('sop-step-count').textContent = `(${sopDraft.steps.length})`;
+}
+
+function moveStep(index, dir) {
+  const steps = sopDraft.steps;
+  const target = index + dir;
+  if (target < 0 || target >= steps.length) return;
+  [steps[index], steps[target]] = [steps[target], steps[index]];
+  // Renumber steps sequentially
+  steps.forEach((s, i) => { s.step = i + 1; });
+  reRenderSteps();
+  saveSOPSteps();
+}
+
+function deleteStep(index) {
+  if (!confirm(`Delete step ${sopDraft.steps[index].step}?`)) return;
+  sopDraft.steps.splice(index, 1);
+  sopDraft.steps.forEach((s, i) => { s.step = i + 1; });
+  reRenderSteps();
+  saveSOPSteps();
+}
+
+async function saveSOPSteps() {
+  const statusEl = document.getElementById('sop-save-status');
+  if (statusEl) statusEl.textContent = 'Saving...';
+  try {
+    await api('PUT', `/api/v1/sops/${sopDraft.id}`, { steps: sopDraft.steps });
+    if (statusEl) statusEl.textContent = '✓ Saved';
+    setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 2000);
+  } catch (e) {
+    if (statusEl) statusEl.textContent = `❌ ${e.message}`;
+  }
+}
+
+function openStepModal(index) {
+  const isEdit = index !== null;
+  const step = isEdit ? { ...sopDraft.steps[index] } : {
+    step: sopDraft.steps.length + 1,
+    actor: '',
+    action: '',
+    description: '',
+    auto: false,
+    tier: '',
+    target_time_sec: null,
+  };
+
+  const overlay = document.getElementById('modal-overlay');
+  const content = document.getElementById('modal-content');
+  overlay.classList.remove('hidden');
+  content.innerHTML = `
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold text-lg">${isEdit ? 'Edit Step ' + step.step : 'Add Step'}</h3>
+      <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+    </div>
+    <div class="space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Step #</label>
+          <input id="step-num" type="number" value="${step.step}" min="1"
+            class="w-full border rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Actor</label>
+          <input id="step-actor" type="text" value="${step.actor}" placeholder="e.g. Commander"
+            class="w-full border rounded-lg px-3 py-2 text-sm" />
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Action</label>
+        <input id="step-action" type="text" value="${step.action}" placeholder="e.g. Alert nearby responders"
+          class="w-full border rounded-lg px-3 py-2 text-sm" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Description</label>
+        <textarea id="step-description" rows="2" placeholder="Optional details..."
+          class="w-full border rounded-lg px-3 py-2 text-sm">${step.description || ''}</textarea>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Tier</label>
+          <select id="step-tier" class="w-full border rounded-lg px-3 py-2 text-sm">
+            <option value="" ${!step.tier ? 'selected' : ''}>None</option>
+            <option value="green" ${step.tier === 'green' ? 'selected' : ''}>Green</option>
+            <option value="amber" ${step.tier === 'amber' ? 'selected' : ''}>Amber</option>
+            <option value="red" ${step.tier === 'red' ? 'selected' : ''}>Red</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Target Time (s)</label>
+          <input id="step-target-time" type="number" value="${step.target_time_sec || ''}" placeholder="Optional"
+            class="w-full border rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div class="flex flex-col justify-end pb-2">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input id="step-auto" type="checkbox" ${step.auto ? 'checked' : ''}
+              class="w-4 h-4 rounded text-indigo-600" />
+            <span class="text-sm font-medium">Auto-execute</span>
+          </label>
+        </div>
+      </div>
+      <div id="modal-error" class="text-red-500 text-sm hidden"></div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="saveStep(${isEdit ? index : 'null'})"
+          class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700">
+          ${isEdit ? 'Save Changes' : 'Add Step'}
+        </button>
+        <button onclick="closeModal()" class="flex-1 border py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+      </div>
+    </div>
+  `;
+}
+
+function saveStep(index) {
+  const action = document.getElementById('step-action').value.trim();
+  const actor = document.getElementById('step-actor').value.trim();
+  if (!action || !actor) { modalError('Action and Actor are required'); return; }
+
+  const step = {
+    step: parseInt(document.getElementById('step-num').value) || (sopDraft.steps.length + 1),
+    actor,
+    action,
+    description: document.getElementById('step-description').value.trim(),
+    auto: document.getElementById('step-auto').checked,
+    tier: document.getElementById('step-tier').value || null,
+    target_time_sec: parseInt(document.getElementById('step-target-time').value) || null,
+  };
+
+  if (index === null) {
+    sopDraft.steps.push(step);
+  } else {
+    sopDraft.steps[index] = step;
+  }
+
+  // Renumber to keep steps sequential (sort by step number first)
+  sopDraft.steps.sort((a, b) => a.step - b.step);
+  sopDraft.steps.forEach((s, i) => { s.step = i + 1; });
+
+  closeModal();
+  reRenderSteps();
+  saveSOPSteps();
+}
+
+// ─── ORGS ─────────────────────────────────────────────────────────────────────
+async function loadOrgs() {
+  const el = document.getElementById('orgs-list');
+  el.innerHTML = '<div class="text-gray-400 text-sm">Loading...</div>';
+  try {
+    const data = await api('GET', '/api/v1/orgs');
+    if (!data.length) { el.innerHTML = '<div class="text-gray-400 text-sm">No organizations found.</div>'; return; }
+    el.innerHTML = data.map(o => card(`
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="font-medium text-sm">${o.name}</div>
+          <div class="text-xs text-gray-500 font-mono">${o.slug}</div>
+        </div>
+        <div class="text-xs text-gray-400">${fmtTime(o.created_at)}</div>
+      </div>
+    `)).join('');
+  } catch (e) {
+    el.innerHTML = errHtml(e.message);
+  }
+}
+
+// ─── MONITORING ──────────────────────────────────────────────────────────────
+async function loadMonitoringSessions() {
+  const el = document.getElementById('monitoring-list');
+  el.innerHTML = '<div class="text-gray-400 text-sm">Loading...</div>';
+  try {
+    const status = document.getElementById('monitoring-status-filter').value;
+    const path = status ? `/api/v1/monitoring/sessions?status=${status}` : '/api/v1/monitoring/sessions';
+    const data = await api('GET', path);
+    if (!data.length) { el.innerHTML = '<div class="text-gray-400 text-sm">No sessions found.</div>'; return; }
+    el.innerHTML = data.map(s => card(`
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="font-medium text-sm">${s.id.slice(0,8)}</div>
+          <div class="text-xs text-gray-500">User: ${s.user_id.slice(0,8)} · Started: ${fmtTime(s.started_at)}</div>
+        </div>
+        ${statusBadge(s.status)}
+      </div>
+      ${s.ended_at ? `<div class="text-xs text-gray-400 mt-1">Ended: ${fmtTime(s.ended_at)}</div>` : ''}
+      ${s.incident_id ? `<div class="text-xs text-orange-600 mt-1">→ Incident: ${s.incident_id.slice(0,8)}</div>` : ''}
+    `)).join('');
+  } catch (e) {
+    el.innerHTML = errHtml(e.message);
+  }
+}
+
+// ─── AUDIT LOG ──────────────────────────────────────────────────────────────
+async function loadAuditLog(page = 1) {
+  auditPage = page;
+  const el = document.getElementById('audit-list');
+  const pagEl = document.getElementById('audit-pagination');
+  el.innerHTML = '<div class="text-gray-400 text-sm">Loading...</div>';
+  try {
+    const incId = document.getElementById('audit-incident-filter').value.trim();
+    const type = document.getElementById('audit-type-filter').value;
+    let path = `/api/v1/audit?page=${page}&page_size=20`;
+    if (incId) path += `&incident_id=${incId}`;
+    if (type) path += `&event_type=${type}`;
+    const data = await api('GET', path);
+    if (!data.events.length) { el.innerHTML = '<div class="text-gray-400 text-sm">No audit events found.</div>'; pagEl.innerHTML = ''; return; }
+    el.innerHTML = data.events.map(e => card(`
+      <div class="flex items-center justify-between text-sm">
+        <div class="font-medium">${e.event_type}</div>
+        <div class="text-xs text-gray-400">${fmtTime(e.created_at)}</div>
+      </div>
+      <div class="text-xs text-gray-500 mt-1">
+        Actor: ${e.actor_type} ${e.actor_id ? '(' + e.actor_id.slice(0,8) + ')' : ''}
+        ${e.incident_id ? ' · Incident: ' + e.incident_id.slice(0,8) : ''}
+      </div>
+      ${Object.keys(e.detail || {}).length ? `<pre class="text-xs text-gray-400 mt-1">${JSON.stringify(e.detail, null, 2)}</pre>` : ''}
+    `)).join('');
+    const total = data.total;
+    const pages = Math.ceil(total / 20);
+    pagEl.innerHTML = `
+      <span class="text-xs text-gray-500">${total} total</span>
+      ${page > 1 ? `<button onclick="loadAuditLog(${page-1})" class="text-xs text-indigo-600 hover:underline">← Prev</button>` : ''}
+      <span class="text-xs text-gray-500">Page ${page}/${pages}</span>
+      ${page < pages ? `<button onclick="loadAuditLog(${page+1})" class="text-xs text-indigo-600 hover:underline">Next →</button>` : ''}
+    `;
+  } catch (e) {
+    el.innerHTML = errHtml(e.message);
+  }
+}
+
+// ─── SEARCH ──────────────────────────────────────────────────────────────────
+async function doSearch() {
+  const q = document.getElementById('search-query').value.trim();
+  if (!q) return;
+  const type = document.getElementById('search-type').value;
+  const el = document.getElementById('search-results');
+  el.innerHTML = '<div class="text-gray-400 text-sm">Searching...</div>';
+  try {
+    let path = `/api/v1/search?q=${encodeURIComponent(q)}`;
+    if (type) path += `&emergency_type=${type}`;
+    const data = await api('GET', path);
+    el.innerHTML = `<pre class="bg-white rounded-xl border p-4 text-xs text-gray-700">${JSON.stringify(data, null, 2)}</pre>`;
+  } catch (e) {
+    el.innerHTML = errHtml(e.message);
+  }
+}
+
+// ─── WebSocket (web admin) ────────────────────────────────────────────────────
+function connectWSWeb(incidentId) {
+  if (ws) disconnectWSWeb();
+  wsIncidentId = incidentId;
+  const wsBase = BASE_URL.replace('http://', 'ws://').replace('https://', 'wss://');
+  const url = `${wsBase}/api/v1/incidents/${incidentId}/ws?token=${token}`;
+
+  setWSStatusWeb('connecting');
+  ws = new WebSocket(url);
+
+  ws.onopen = () => setWSStatusWeb('connected');
+
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'snapshot' || msg.type === 'participant.location') return;
+      // Any other event: refresh messages and actions
+      refreshIncidentDetailData(incidentId);
+    } catch { }
+  };
+
+  ws.onclose = () => {
+    ws = null;
+    setWSStatusWeb('disconnected');
+    // Auto-reconnect if still on this incident's detail
+    if (wsIncidentId && currentSection === 'incident-detail') {
+      setTimeout(() => {
+        if (wsIncidentId && currentSection === 'incident-detail') connectWSWeb(wsIncidentId);
+      }, 3000);
+    }
+  };
+
+  ws.onerror = () => { ws = null; setWSStatusWeb('disconnected'); };
+}
+
+function disconnectWSWeb() {
+  wsIncidentId = null;
+  if (ws) { ws.close(); ws = null; }
+  setWSStatusWeb('disconnected');
+}
+
+function setWSStatusWeb(state) {
+  const el = document.getElementById('web-ws-status');
+  if (!el) return;
+  const colors = { connected: 'text-green-600', connecting: 'text-yellow-500', disconnected: 'text-gray-400' };
+  const labels = { connected: '● Live', connecting: '● Connecting…', disconnected: '○ Offline' };
+  el.className = `text-xs font-medium ${colors[state]}`;
+  el.textContent = labels[state];
+}
+
+async function refreshIncidentDetailData(incidentId) {
+  try {
+    const data = await api('GET', `/api/v1/incidents/${incidentId}`);
+    const inc = data.incident;
+
+    // Update messages
+    const msgEl = document.getElementById(`messages-${incidentId}`);
+    if (msgEl) msgEl.innerHTML = (data.messages || []).map(m => messageHtml(m)).join('') || '<div class="text-gray-400 text-xs">No messages.</div>';
+
+    // Update participants
+    const partEl = document.getElementById(`participants-${incidentId}`);
+    if (partEl) partEl.innerHTML = (data.participants || []).map(p => `
+      <div class="flex items-center justify-between text-xs">
+        <span class="${p.is_ai ? 'text-purple-600' : 'text-gray-700'}">${p.name} ${p.is_ai ? '🤖' : ''}</span>
+        <span class="text-gray-400">${p.role}</span>
+      </div>
+    `).join('');
+
+    // Update pending actions count + list
+    const actCountEl = document.getElementById(`actions-count-${incidentId}`);
+    if (actCountEl) actCountEl.textContent = `Pending Actions (${(data.pending_actions || []).length})`;
+    const actEl = document.getElementById(`actions-list-${incidentId}`);
+    if (actEl) actEl.innerHTML = (data.pending_actions || []).map(a => `
+      <div class="border rounded-lg p-3 text-xs">
+        <div class="flex items-center justify-between mb-1">
+          <span class="font-medium">${a.action_type}</span>
+          <div class="flex gap-1">${tierBadge(a.tier)} ${statusBadge(a.status)}</div>
+        </div>
+        <div class="text-gray-500">${a.description}</div>
+        ${a.status === 'pending' ? `
+          <div class="flex gap-2 mt-2">
+            <button onclick="approveAction('${inc.id}','${a.id}')"
+              class="bg-green-600 text-white px-2 py-0.5 rounded text-xs hover:bg-green-700">Approve</button>
+            <button onclick="rejectAction('${inc.id}','${a.id}')"
+              class="bg-red-500 text-white px-2 py-0.5 rounded text-xs hover:bg-red-600">Reject</button>
+          </div>` : ''}
+      </div>
+    `).join('') || '<div class="text-gray-400">No pending actions.</div>';
+
+    // Update status badge
+    const statusEl = document.getElementById(`incident-status-${incidentId}`);
+    if (statusEl) statusEl.outerHTML = statusBadge(inc.status);
+  } catch { /* silently ignore */ }
+}
+
+// ─── MODALS ──────────────────────────────────────────────────────────────────
+function openModal(type) {
+  const overlay = document.getElementById('modal-overlay');
+  const content = document.getElementById('modal-content');
+  overlay.classList.remove('hidden');
+
+  const templates = {
+    'create-incident': `
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-lg">Create Incident</h3>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Emergency Type</label>
+          <select id="m-emergency-type" class="w-full border rounded-lg px-3 py-2 text-sm">
+            <option value="workplace_violence">Workplace Violence</option>
+            <option value="medical">Medical</option>
+            <option value="other">Other</option>
+            <option value="generic">Generic</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Trigger Source</label>
+          <select id="m-trigger-source" class="w-full border rounded-lg px-3 py-2 text-sm">
+            <option value="ui_button">UI Button</option>
+            <option value="commander">Commander</option>
+            <option value="voice">Voice</option>
+            <option value="pendant">Pendant</option>
+            <option value="ai_detected">AI Detected</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Location (JSON, optional)</label>
+          <input id="m-location" type="text" placeholder='{"lat": 37.7749, "lng": -122.4194}'
+            class="w-full border rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div id="modal-error" class="text-red-500 text-sm hidden"></div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="createIncident()"
+            class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700">
+            Create
+          </button>
+          <button onclick="closeModal()" class="flex-1 border py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+        </div>
+      </div>
+    `,
+    'create-user': `
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-lg">Create User</h3>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Name</label>
+          <input id="m-name" type="text" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Email</label>
+          <input id="m-email" type="email" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Password</label>
+          <input id="m-password" type="password" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Role</label>
+          <select id="m-role" class="w-full border rounded-lg px-3 py-2 text-sm">
+            <option value="worker">Worker</option>
+            <option value="responder">Responder</option>
+            <option value="commander">Commander</option>
+            <option value="supervisor">Supervisor</option>
+            <option value="admin">Admin</option>
+            <option value="org_admin">Org Admin</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Phone (optional)</label>
+          <input id="m-phone" type="text" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div id="modal-error" class="text-red-500 text-sm hidden"></div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="createUser()"
+            class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700">Create</button>
+          <button onclick="closeModal()" class="flex-1 border py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+        </div>
+      </div>
+    `,
+    'create-facility': `
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-lg">Add Facility</h3>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Name</label>
+          <input id="m-name" type="text" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Facility Type</label>
+          <select id="m-facility-type" class="w-full border rounded-lg px-3 py-2 text-sm">
+            <option value="patient_home">Patient Home</option>
+            <option value="office">Office</option>
+            <option value="hospital">Hospital</option>
+            <option value="snf">SNF</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Cell Coverage</label>
+          <select id="m-cell-coverage" class="w-full border rounded-lg px-3 py-2 text-sm">
+            <option value="unknown">Unknown</option>
+            <option value="good">Good</option>
+            <option value="fair">Fair</option>
+            <option value="poor">Poor</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Notes (optional)</label>
+          <textarea id="m-notes" rows="2" class="w-full border rounded-lg px-3 py-2 text-sm"></textarea>
+        </div>
+        <div id="modal-error" class="text-red-500 text-sm hidden"></div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="createFacility()"
+            class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700">Create</button>
+          <button onclick="closeModal()" class="flex-1 border py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+        </div>
+      </div>
+    `,
+    'create-org': `
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-lg">Create Organization</h3>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Name</label>
+          <input id="m-name" type="text" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Slug</label>
+          <input id="m-slug" type="text" placeholder="my-org" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div id="modal-error" class="text-red-500 text-sm hidden"></div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="createOrg()"
+            class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700">Create</button>
+          <button onclick="closeModal()" class="flex-1 border py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+        </div>
+      </div>
+    `,
+    'create-sop': `
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-lg">Create SOP</h3>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Name</label>
+          <input id="m-name" type="text" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">SOP Code</label>
+          <input id="m-sop-code" type="text" placeholder="SOP-001" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Emergency Type</label>
+          <select id="m-emergency-type" class="w-full border rounded-lg px-3 py-2 text-sm">
+            <option value="workplace_violence">Workplace Violence</option>
+            <option value="medical">Medical</option>
+            <option value="other">Other</option>
+            <option value="generic">Generic</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Description (optional)</label>
+          <textarea id="m-description" rows="2" class="w-full border rounded-lg px-3 py-2 text-sm"></textarea>
+        </div>
+        <div id="modal-error" class="text-red-500 text-sm hidden"></div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="createSOP()"
+            class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700">Create</button>
+          <button onclick="closeModal()" class="flex-1 border py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+        </div>
+      </div>
+    `,
+  };
+
+  content.innerHTML = templates[type] || '<div>Unknown modal</div>';
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.add('hidden');
+}
+
+function modalError(msg) {
+  const el = document.getElementById('modal-error');
+  if (el) { el.textContent = msg; el.classList.remove('hidden'); }
+}
+
+async function createIncident() {
+  try {
+    const body = {
+      emergency_type: document.getElementById('m-emergency-type').value,
+      trigger_source: document.getElementById('m-trigger-source').value,
+    };
+    const loc = document.getElementById('m-location').value.trim();
+    if (loc) body.location = JSON.parse(loc);
+    await api('POST', '/api/v1/incidents', body);
+    closeModal();
+    loadIncidents();
+  } catch (e) { modalError(e.message); }
+}
+
+async function createUser() {
+  try {
+    const body = {
+      name: document.getElementById('m-name').value,
+      email: document.getElementById('m-email').value,
+      password: document.getElementById('m-password').value,
+      role: document.getElementById('m-role').value,
+    };
+    const phone = document.getElementById('m-phone').value.trim();
+    if (phone) body.phone = phone;
+    await api('POST', '/api/v1/users', body);
+    closeModal();
+    loadUsers();
+  } catch (e) { modalError(e.message); }
+}
+
+async function createFacility() {
+  try {
+    const body = {
+      name: document.getElementById('m-name').value,
+      facility_type: document.getElementById('m-facility-type').value,
+      cell_coverage: document.getElementById('m-cell-coverage').value,
+    };
+    const notes = document.getElementById('m-notes').value.trim();
+    if (notes) body.notes = notes;
+    await api('POST', '/api/v1/facilities', body);
+    closeModal();
+    loadFacilities();
+  } catch (e) { modalError(e.message); }
+}
+
+async function createOrg() {
+  try {
+    const body = {
+      name: document.getElementById('m-name').value,
+      slug: document.getElementById('m-slug').value,
+    };
+    await api('POST', '/api/v1/orgs', body);
+    closeModal();
+    loadOrgs();
+  } catch (e) { modalError(e.message); }
+}
+
+async function createSOP() {
+  try {
+    const body = {
+      name: document.getElementById('m-name').value,
+      sop_code: document.getElementById('m-sop-code').value,
+      emergency_type: document.getElementById('m-emergency-type').value,
+      steps: [],
+    };
+    const desc = document.getElementById('m-description').value.trim();
+    if (desc) body.description = desc;
+    await api('POST', '/api/v1/sops', body);
+    closeModal();
+    loadSOPs();
+  } catch (e) { modalError(e.message); }
+}
+
+// Close modal on overlay click
+document.getElementById('modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
