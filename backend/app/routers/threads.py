@@ -87,9 +87,41 @@ async def list_messages(
 async def websocket_endpoint(
     websocket: WebSocket,
     incident_id: uuid.UUID,
-    token: str = Query(...),
-    last_seq: Optional[int] = Query(default=None),
+    token: str = Query(..., description="JWT access token (query param, required for WS auth)"),
+    last_seq: Optional[int] = Query(default=None, description="Resume from this message sequence number"),
 ):
+    """
+    Incident real-time WebSocket.
+
+    Connect: `ws://.../api/v1/incidents/{incident_id}/ws?token=<jwt>`
+
+    On connect the server sends a full **snapshot** of current incident state.
+    After that, all messages are pushed as JSON events.
+
+    ---
+    **Client → Server messages**
+
+    Location update (sent periodically while participant is active):
+    ```json
+    {"type": "location", "lat": 37.7749, "lng": -122.4194, "accuracy_m": 5.0}
+    ```
+
+    Heartbeat (sent every ~20 s to maintain presence):
+    ```json
+    {"type": "heartbeat"}
+    ```
+
+    ---
+    **Server → Client events** (pushed via Redis pub/sub)
+
+    | `type` | Description |
+    |---|---|
+    | `snapshot` | Full incident state on connect |
+    | `participant.location` | Another participant moved |
+    | `message.new` | New chat/system message |
+    | `action.new` | New action requiring approval |
+    | `incident.updated` | Status or field change |
+    """
     # Authenticate via token query param
     payload = decode_token(token)
     user_id_str = payload.get("sub")
