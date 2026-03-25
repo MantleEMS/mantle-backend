@@ -5,7 +5,7 @@ import uuid
 from typing import Optional
 
 from app.database import get_db
-from app.dependencies import get_current_user, require_org_admin, require_super_admin
+from app.dependencies import get_current_user, require_commander, require_org_admin, require_super_admin
 from app.models import Organization, Facility, SOP, User
 from app.schemas.config import (
     OrganizationOut, OrganizationCreate, OrganizationUpdate,
@@ -302,7 +302,7 @@ async def list_users(
     role: str = None,
     status: str = None,
     org_id: Optional[uuid.UUID] = None,
-    current_user: User = Depends(require_org_admin),
+    current_user: User = Depends(require_commander),
     db: AsyncSession = Depends(get_db),
 ):
     if current_user.role == "super_admin":
@@ -347,7 +347,7 @@ async def create_user(
 @router.get("/users/{user_id}", response_model=UserOut)
 async def get_user(
     user_id: uuid.UUID,
-    current_user: User = Depends(require_org_admin),
+    current_user: User = Depends(require_commander),
     db: AsyncSession = Depends(get_db),
 ):
     if current_user.role == "super_admin":
