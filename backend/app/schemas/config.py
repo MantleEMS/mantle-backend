@@ -122,7 +122,7 @@ class UserOut(BaseModel):
     email: str
     name: str
     phone: Optional[str] = None
-    role: str
+    roles: List[str]
     status: str
     qualifications: Optional[list] = []
     medical_flags: Optional[list] = []
@@ -139,7 +139,7 @@ class UserCreate(BaseModel):
     password: str
     name: str
     phone: Optional[str] = None
-    role: str = "worker"
+    roles: List[str] = ["worker"]
     status: str = "active"
     qualifications: Optional[list] = []
     medical_flags: Optional[list] = []
@@ -151,7 +151,7 @@ class UserUpdate(BaseModel):
     email: Optional[str] = None
     name: Optional[str] = None
     phone: Optional[str] = None
-    role: Optional[str] = None
+    roles: Optional[List[str]] = None
     status: Optional[str] = None
     qualifications: Optional[list] = None
     medical_flags: Optional[list] = None

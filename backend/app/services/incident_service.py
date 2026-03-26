@@ -33,7 +33,21 @@ async def get_sop_for_emergency(db: AsyncSession, org_id: UUID, emergency_type: 
             )
         ).limit(1)
     )
-    return result.scalar_one_or_none()
+    sop = result.scalar_one_or_none()
+    if sop is not None:
+        return sop
+
+    # Fall back to the org's generic default SOP
+    fallback = await db.execute(
+        select(SOP).where(
+            and_(
+                SOP.org_id == org_id,
+                SOP.emergency_type == "generic",
+                SOP.is_active == True,
+            )
+        ).limit(1)
+    )
+    return fallback.scalar_one_or_none()
 
 
 async def create_incident(
@@ -56,7 +70,7 @@ async def create_incident(
     # Find commander for org
     commander_result = await db.execute(
         select(User).where(
-            and_(User.org_id == org_id, User.role == "commander", User.status != "inactive")
+            and_(User.org_id == org_id, User.roles.contains(["commander"]), User.status != "inactive")
         ).limit(1)
     )
     commander = commander_result.scalar_one_or_none()
@@ -142,12 +156,13 @@ async def create_incident(
         detail={"incident_number": incident_number, "emergency_type": emergency_type},
     )
 
-    # Send push notifications to commanders
+    # Send push notifications to commanders (own session — must not reuse request db)
     asyncio.create_task(
         send_push_to_commanders(
-            db=db,
             org_id=org_id,
-            incident=incident,
+            incident_id=incident.id,
+            incident_number=incident_number,
+            emergency_type=emergency_type,
             initiator_name=initiator.name if initiator else "Unknown",
         )
     )

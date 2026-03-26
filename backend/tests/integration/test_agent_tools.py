@@ -39,7 +39,7 @@ async def test_get_worker_profile_real(db: AsyncSession, seed):
     result = await get_worker_profile(db, str(seed["worker"].id))
     assert result["name"] == "Test Worker"
     assert "rn" in result["qualifications"]
-    assert result["role"] == "worker"
+    assert result["roles"] == ["worker"]
 
 
 async def test_get_worker_profile_missing(db: AsyncSession, seed):

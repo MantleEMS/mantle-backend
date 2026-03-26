@@ -6,7 +6,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, user_has_role
 from app.models import MonitoringSession, TelemetryEvent, User
 from app.schemas.monitoring import (
     StartSessionRequest,
@@ -53,7 +53,7 @@ async def end_monitoring_session(
     session = await get_session(db, session_id)
     if not session or session.org_id != current_user.org_id:
         raise HTTPException(status_code=404, detail="Session not found")
-    if session.user_id != current_user.id and current_user.role not in ("commander", "admin"):
+    if session.user_id != current_user.id and not user_has_role(current_user, "commander", "admin"):
         raise HTTPException(status_code=403, detail="Access denied")
     if session.status != "active":
         raise HTTPException(status_code=400, detail="Session is not active")
@@ -72,7 +72,7 @@ async def list_monitoring_sessions(
     query = select(MonitoringSession).where(MonitoringSession.org_id == current_user.org_id)
 
     # Workers only see their own sessions; commanders/admins see all
-    if current_user.role not in ("commander", "admin", "supervisor"):
+    if not user_has_role(current_user, "commander", "admin", "supervisor"):
         query = query.where(MonitoringSession.user_id == current_user.id)
     elif user_id:
         query = query.where(MonitoringSession.user_id == user_id)
@@ -94,7 +94,7 @@ async def get_monitoring_session(
     session = await get_session(db, session_id)
     if not session or session.org_id != current_user.org_id:
         raise HTTPException(status_code=404, detail="Session not found")
-    if session.user_id != current_user.id and current_user.role not in ("commander", "admin", "supervisor"):
+    if session.user_id != current_user.id and not user_has_role(current_user, "commander", "admin", "supervisor"):
         raise HTTPException(status_code=403, detail="Access denied")
     return session
 
@@ -136,7 +136,7 @@ async def get_session_telemetry(
     session = await get_session(db, session_id)
     if not session or session.org_id != current_user.org_id:
         raise HTTPException(status_code=404, detail="Session not found")
-    if session.user_id != current_user.id and current_user.role not in ("commander", "admin", "supervisor"):
+    if session.user_id != current_user.id and not user_has_role(current_user, "commander", "admin", "supervisor"):
         raise HTTPException(status_code=403, detail="Access denied")
 
     events = await get_telemetry(db, session_id, event_type=event_type, limit=limit, after=after)

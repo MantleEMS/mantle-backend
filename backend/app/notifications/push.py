@@ -11,6 +11,7 @@ from sqlalchemy import select, and_
 
 from app.config import settings
 from app.models import User, Incident
+from app.database import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -77,31 +78,33 @@ async def send_push_notification(
 
 
 async def send_push_to_commanders(
-    db: AsyncSession,
     org_id: UUID,
-    incident: Incident,
+    incident_id: UUID,
+    incident_number: str,
+    emergency_type: str,
     initiator_name: str,
 ):
     """Notify all active commanders about a new SOS incident."""
-    result = await db.execute(
-        select(User).where(
-            and_(
-                User.org_id == org_id,
-                User.role == "commander",
-                User.status != "inactive",
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(User).where(
+                and_(
+                    User.org_id == org_id,
+                    User.roles.contains(["commander"]),
+                    User.status != "inactive",
+                )
             )
         )
-    )
-    commanders = result.scalars().all()
+        commanders = result.scalars().all()
 
-    for commander in commanders:
-        await send_push_notification(
-            db=db,
-            user_id=commander.id,
-            title=f"SOS: {incident.emergency_type.replace('_', ' ').title()}",
-            body=f"{initiator_name} triggered emergency. Incident {incident.incident_number}.",
-            data={"deep_link": f"mantle://incident/{incident.id}/commander"},
-        )
+        for commander in commanders:
+            await send_push_notification(
+                db=db,
+                user_id=commander.id,
+                title=f"SOS: {emergency_type.replace('_', ' ').title()}",
+                body=f"{initiator_name} triggered emergency. Incident {incident_number}.",
+                data={"deep_link": f"mantle://incident/{incident_id}/commander"},
+            )
 
 
 async def send_dispatch_push(

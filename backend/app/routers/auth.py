@@ -30,14 +30,14 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
         logger.warning(f"Failed login attempt for email={body.email!r}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    logger.info(f"User {user.id} logged in [role={user.role}, org={user.org_id}]")
-    access_token = create_access_token(str(user.id), role=user.role)
+    logger.info(f"User {user.id} logged in [roles={user.roles}, org={user.org_id}]")
+    access_token = create_access_token(str(user.id), roles=user.roles)
     refresh_token = create_refresh_token(str(user.id))
 
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        user={"id": str(user.id), "name": user.name, "role": user.role, "org_id": str(user.org_id)},
+        user={"id": str(user.id), "name": user.name, "roles": user.roles, "org_id": str(user.org_id)},
     )
 
 
@@ -56,7 +56,7 @@ async def refresh(body: RefreshRequest, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
     logger.info(f"Access token refreshed for user {user.id}")
-    return RefreshResponse(access_token=create_access_token(str(user.id), role=user.role))
+    return RefreshResponse(access_token=create_access_token(str(user.id), roles=user.roles))
 
 
 @router.put("/users/me/device")

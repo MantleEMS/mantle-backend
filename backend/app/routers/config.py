@@ -27,7 +27,7 @@ async def list_organizations(
     current_user: User = Depends(require_org_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    if current_user.role == "super_admin":
+    if "super_admin" in current_user.roles:
         result = await db.execute(select(Organization))
     else:
         result = await db.execute(
@@ -55,7 +55,7 @@ async def get_organization(
     current_user: User = Depends(require_org_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    if current_user.role != "super_admin" and org_id != current_user.org_id:
+    if "super_admin" not in current_user.roles and org_id != current_user.org_id:
         raise HTTPException(status_code=403, detail="Access denied")
     result = await db.execute(select(Organization).where(Organization.id == org_id))
     org = result.scalar_one_or_none()
@@ -71,7 +71,7 @@ async def update_organization(
     current_user: User = Depends(require_org_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    if current_user.role != "super_admin" and org_id != current_user.org_id:
+    if "super_admin" not in current_user.roles and org_id != current_user.org_id:
         raise HTTPException(status_code=403, detail="Access denied")
     result = await db.execute(select(Organization).where(Organization.id == org_id))
     org = result.scalar_one_or_none()
@@ -105,7 +105,7 @@ async def list_facilities(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if current_user.role == "super_admin":
+    if "super_admin" in current_user.roles:
         result = await db.execute(select(Facility))
     else:
         result = await db.execute(
@@ -121,7 +121,7 @@ async def create_facility(
     db: AsyncSession = Depends(get_db),
 ):
     data = body.model_dump(exclude={"org_id"})
-    if current_user.role == "super_admin" and body.org_id:
+    if "super_admin" in current_user.roles and body.org_id:
         target_org_id = body.org_id
     else:
         target_org_id = current_user.org_id
@@ -138,7 +138,7 @@ async def get_facility(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if current_user.role == "super_admin":
+    if "super_admin" in current_user.roles:
         query = select(Facility).where(Facility.id == facility_id)
     else:
         query = select(Facility).where(
@@ -158,7 +158,7 @@ async def update_facility(
     current_user: User = Depends(require_org_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    if current_user.role == "super_admin":
+    if "super_admin" in current_user.roles:
         query = select(Facility).where(Facility.id == facility_id)
     else:
         query = select(Facility).where(
@@ -181,7 +181,7 @@ async def delete_facility(
     current_user: User = Depends(require_org_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    if current_user.role == "super_admin":
+    if "super_admin" in current_user.roles:
         query = select(Facility).where(Facility.id == facility_id)
     else:
         query = select(Facility).where(
@@ -203,7 +203,7 @@ async def list_sops(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if current_user.role == "super_admin":
+    if "super_admin" in current_user.roles:
         query = select(SOP).where(SOP.is_active == True)
     else:
         query = select(SOP).where(and_(SOP.org_id == current_user.org_id, SOP.is_active == True))
@@ -222,7 +222,7 @@ async def create_sop(
     data = body.model_dump(exclude={"org_id"})
     data["steps"] = [s if isinstance(s, dict) else s.model_dump() for s in body.steps]
     data["responder_checklist"] = [c if isinstance(c, dict) else c.model_dump() for c in body.responder_checklist]
-    if current_user.role == "super_admin" and body.org_id:
+    if "super_admin" in current_user.roles and body.org_id:
         target_org_id = body.org_id
     else:
         target_org_id = current_user.org_id
@@ -239,7 +239,7 @@ async def get_sop(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if current_user.role == "super_admin":
+    if "super_admin" in current_user.roles:
         query = select(SOP).where(SOP.id == sop_id)
     else:
         query = select(SOP).where(and_(SOP.id == sop_id, SOP.org_id == current_user.org_id))
@@ -257,7 +257,7 @@ async def update_sop(
     current_user: User = Depends(require_org_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    if current_user.role == "super_admin":
+    if "super_admin" in current_user.roles:
         query = select(SOP).where(SOP.id == sop_id)
     else:
         query = select(SOP).where(and_(SOP.id == sop_id, SOP.org_id == current_user.org_id))
@@ -283,7 +283,7 @@ async def delete_sop(
     current_user: User = Depends(require_org_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    if current_user.role == "super_admin":
+    if "super_admin" in current_user.roles:
         query = select(SOP).where(SOP.id == sop_id)
     else:
         query = select(SOP).where(and_(SOP.id == sop_id, SOP.org_id == current_user.org_id))
@@ -305,14 +305,14 @@ async def list_users(
     current_user: User = Depends(require_commander),
     db: AsyncSession = Depends(get_db),
 ):
-    if current_user.role == "super_admin":
+    if "super_admin" in current_user.roles:
         query = select(User)
         if org_id:
             query = query.where(User.org_id == org_id)
     else:
         query = select(User).where(User.org_id == current_user.org_id)
     if role:
-        query = query.where(User.role == role)
+        query = query.where(User.roles.contains([role]))
     if status:
         query = query.where(User.status == status)
     result = await db.execute(query)
@@ -325,11 +325,11 @@ async def create_user(
     current_user: User = Depends(require_org_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    if current_user.role != "super_admin" and body.role in ELEVATED_ROLES:
+    if "super_admin" not in current_user.roles and any(r in ELEVATED_ROLES for r in body.roles):
         raise HTTPException(status_code=403, detail="Cannot assign elevated roles")
     data = body.model_dump(exclude={"org_id"})
     password = data.pop("password")
-    if current_user.role == "super_admin":
+    if "super_admin" in current_user.roles:
         target_org_id = body.org_id  # may be None for super_admin user
     else:
         target_org_id = current_user.org_id
@@ -350,7 +350,7 @@ async def get_user(
     current_user: User = Depends(require_commander),
     db: AsyncSession = Depends(get_db),
 ):
-    if current_user.role == "super_admin":
+    if "super_admin" in current_user.roles:
         query = select(User).where(User.id == user_id)
     else:
         query = select(User).where(and_(User.id == user_id, User.org_id == current_user.org_id))
@@ -368,7 +368,7 @@ async def update_user(
     current_user: User = Depends(require_org_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    if current_user.role == "super_admin":
+    if "super_admin" in current_user.roles:
         query = select(User).where(User.id == user_id)
     else:
         query = select(User).where(and_(User.id == user_id, User.org_id == current_user.org_id))
@@ -377,7 +377,7 @@ async def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     data = body.model_dump(exclude_none=True)
-    if current_user.role != "super_admin" and data.get("role") in ELEVATED_ROLES:
+    if "super_admin" not in current_user.roles and any(r in ELEVATED_ROLES for r in data.get("roles", [])):
         raise HTTPException(status_code=403, detail="Cannot assign elevated roles")
     for field, value in data.items():
         setattr(user, field, value)
@@ -394,7 +394,7 @@ async def delete_user(
 ):
     if user_id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot delete your own account")
-    if current_user.role == "super_admin":
+    if "super_admin" in current_user.roles:
         query = select(User).where(User.id == user_id)
     else:
         query = select(User).where(and_(User.id == user_id, User.org_id == current_user.org_id))

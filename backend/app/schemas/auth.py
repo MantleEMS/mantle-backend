@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 
 
@@ -38,7 +38,7 @@ class UpdateProfileRequest(BaseModel):
 class UserOut(BaseModel):
     id: UUID
     name: str
-    role: str
+    roles: List[str]
     status: str
     org_id: Optional[UUID] = None
 

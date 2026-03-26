@@ -191,22 +191,22 @@ alembic upgrade head
 
 ### Platform
 
-| Email | Password | Role | Scope |
+| Email | Password | Roles | Scope |
 |---|---|---|---|
-| `admin@mantle.system` | `superadmin123` | `super_admin` | All organizations |
+| `admin@mantle.system` | `superadmin123` | `["super_admin"]` | All organizations |
 
 ### Sunrise Home Health (org: `sunrise`)
 
-| Email | Password | Role |
+| Email | Password | Roles |
 |---|---|---|
-| `orgadmin@sunrise.demo` | `password123` | `org_admin` |
-| `torres@sunrise.demo` | `password123` | `commander` |
-| `dpark@sunrise.demo` | `password123` | `supervisor` |
-| `maria@sunrise.demo` | `password123` | `worker` |
-| `sarah@sunrise.demo` | `password123` | `worker` |
-| `williams@sunrise.demo` | `password123` | `worker` |
-| `park@sunrise.demo` | `password123` | `worker` |
-| `lee@sunrise.demo` | `password123` | `worker` |
+| `orgadmin@sunrise.demo` | `password123` | `["org_admin"]` |
+| `torres@sunrise.demo` | `password123` | `["commander"]` |
+| `dpark@sunrise.demo` | `password123` | `["supervisor"]` |
+| `maria@sunrise.demo` | `password123` | `["worker"]` |
+| `sarah@sunrise.demo` | `password123` | `["worker"]` |
+| `williams@sunrise.demo` | `password123` | `["worker"]` |
+| `park@sunrise.demo` | `password123` | `["worker"]` |
+| `lee@sunrise.demo` | `password123` | `["worker"]` |
 
 Login via `POST /api/v1/auth/login` with `{ "email": "...", "password": "..." }`.
 
@@ -214,11 +214,26 @@ Login via `POST /api/v1/auth/login` with `{ "email": "...", "password": "..." }`
 
 ## Roles & Statuses Reference
 
-### User
+### User Roles
+
+A user can hold **one or more roles** simultaneously (stored as a JSON array). For example, a field worker who is also a trained responder would have `roles: ["worker", "responder"]`.
+
+| Role | Description |
+|---|---|
+| `super_admin` | Platform-level administrator with access to all organizations. Not scoped to any org. |
+| `org_admin` | Organization (tenant) administrator. Manages users, facilities, and SOPs within their org. |
+| `commander` | Incident commander. Approves/rejects actions, takes command of active incidents, and oversees response. |
+| `supervisor` | Read-only oversight role. Can view monitoring sessions, incidents, and telemetry but cannot take command actions. |
+| `worker` | Field worker (e.g. home healthcare aide). Can trigger incidents, submit telemetry, and participate in monitoring sessions. Gets a long-lived JWT (`MOBILE_ACCESS_TOKEN_EXPIRE_DAYS`). |
+| `responder` | Emergency responder who can be dispatched to incidents. Can be combined with `worker` for staff who perform both roles. Gets a long-lived JWT. |
+| `admin` | Alias for `commander` — treated identically in permission checks. |
+
+**JWT token expiry:** Users with `worker` or `responder` in their roles get a long-lived access token (default 365 days, configured via `MOBILE_ACCESS_TOKEN_EXPIRE_DAYS`). All other roles use the standard short-lived token (`ACCESS_TOKEN_EXPIRE_MINUTES`).
+
+### User Status
 
 | Field | Values |
 |---|---|
-| `role` | `super_admin`, `org_admin`, `admin`, `commander`, `supervisor`, `responder`, `worker` |
 | `status` | `active`, `on_duty`, `off_duty`, `inactive` |
 
 ### Incident

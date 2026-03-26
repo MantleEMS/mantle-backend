@@ -56,8 +56,9 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     name = Column(String(255), nullable=False)
     phone = Column(String(50))
-    # role: super_admin, org_admin, admin, commander, worker, responder, supervisor
-    role = Column(String(30), nullable=False, default="worker")
+    # roles: list of roles, e.g. ["worker"], ["responder"], ["worker", "responder"]
+    # valid values: super_admin, org_admin, admin, commander, worker, responder, supervisor
+    roles = Column(JSONB, nullable=False, default=list)
     # status: active, on_duty, off_duty, inactive
     status = Column(String(30), nullable=False, default="active")
     qualifications = Column(JSONB, default=list)
@@ -70,7 +71,8 @@ class User(Base):
     org = relationship("Organization", back_populates="users", lazy="noload")
 
     __table_args__ = (
-        Index("ix_users_org_role_status", "org_id", "role", "status"),
+        Index("ix_users_org_status", "org_id", "status"),
+        Index("ix_users_roles_gin", "roles", postgresql_using="gin"),
     )
 
 

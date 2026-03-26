@@ -45,22 +45,27 @@ async def get_current_user(
     return user
 
 
+def user_has_role(user: User, *roles: str) -> bool:
+    """Return True if the user has any of the given roles."""
+    return any(r in roles for r in (user.roles or []))
+
+
 async def require_commander(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role not in ("commander", "admin", "org_admin", "super_admin"):
-        logger.warning(f"Authorization denied: user {current_user.id} [role={current_user.role}] requires commander/admin")
+    if not user_has_role(current_user, "commander", "admin", "org_admin", "super_admin"):
+        logger.warning(f"Authorization denied: user {current_user.id} [roles={current_user.roles}] requires commander/admin")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Commander role required")
     return current_user
 
 
 async def require_org_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role not in ("org_admin", "super_admin"):
-        logger.warning(f"Authorization denied: user {current_user.id} [role={current_user.role}] requires org_admin/super_admin")
+    if not user_has_role(current_user, "org_admin", "super_admin"):
+        logger.warning(f"Authorization denied: user {current_user.id} [roles={current_user.roles}] requires org_admin/super_admin")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Org admin access required")
     return current_user
 
 
 async def require_super_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != "super_admin":
-        logger.warning(f"Authorization denied: user {current_user.id} [role={current_user.role}] requires super_admin")
+    if not user_has_role(current_user, "super_admin"):
+        logger.warning(f"Authorization denied: user {current_user.id} [roles={current_user.roles}] requires super_admin")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required")
     return current_user

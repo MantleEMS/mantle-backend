@@ -13,8 +13,7 @@ Mantle EMS is a **multi-tenant, real-time Emergency Management System** for home
 │                          CLIENT LAYER                                   │
 │                                                                         │
 │  ┌──────────────────────┐          ┌──────────────────────────────┐     │
-│  │   Web Admin Panel    │          │    Mobile Simulator / App    │     │
-│  │    (web.html)        │          │        (mobile.html)         │     │
+│  │    Web Interface     │          │      Mobile Interface        │     │
 │  │                      │          │                              │     │
 │  │  • Incidents         │          │  • SOS Trigger               │     │
 │  │  • User Mgmt         │          │  • Monitoring Sessions       │     │
@@ -25,7 +24,9 @@ Mantle EMS is a **multi-tenant, real-time Emergency Management System** for home
               │ HTTP REST                            │ HTTP REST + WebSocket
               └──────────────────┬───────────────────┘
                                  │
-┌────────────────────────────────▼────────────────────────────────────────┐
+              ▲ responses / push events / WS frames
+              │
+┌─────────────┴──────────────────────────────────────────────────────────┐
 │                         API LAYER (FastAPI)                             │
 │                         Port 8000 · Uvicorn ASGI                        │
 │                                                                         │

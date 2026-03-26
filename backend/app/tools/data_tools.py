@@ -7,7 +7,7 @@ import math
 import logging
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, or_
 
 from app.models import Incident, User, Facility, SOP, AuditLog
 from app.tools.registry import ToolDefinition, ToolRegistry
@@ -57,7 +57,7 @@ async def get_worker_profile(db: AsyncSession, user_id: str) -> dict:
     return {
         "id": str(user.id),
         "name": user.name,
-        "role": user.role,
+        "roles": user.roles,
         "phone": user.phone,
         "status": user.status,
         "qualifications": user.qualifications or [],
@@ -118,7 +118,7 @@ async def get_available_responders(
         and_(
             User.org_id == UUID(org_id),
             User.status == "on_duty",
-            User.role.in_(["worker", "responder"]),
+            or_(User.roles.contains(["worker"]), User.roles.contains(["responder"])),
         )
     )
     result = await db.execute(query)

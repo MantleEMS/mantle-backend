@@ -28,7 +28,7 @@ async def run_seed():
                 email=SUPER_ADMIN_EMAIL,
                 password_hash=hash_password("superadmin123"),
                 name="Platform Super Admin",
-                role="super_admin",
+                roles=["super_admin"],
                 status="active",
                 qualifications=[],
                 medical_flags=[],
@@ -49,7 +49,7 @@ async def run_seed():
                     password_hash=hash_password(DEFAULT_PASSWORD),
                     name="Sunrise Org Admin",
                     phone="512-555-0100",
-                    role="org_admin",
+                    roles=["org_admin"],
                     status="active",
                     qualifications=[],
                     medical_flags=[],
@@ -133,7 +133,7 @@ async def run_seed():
                 password_hash=hash_password(DEFAULT_PASSWORD),
                 name="Maria Rodriguez",
                 phone="512-555-0101",
-                role="worker",
+                roles=["worker"],
                 status="on_duty",
                 qualifications=["rn", "cpr"],
                 medical_flags=[],
@@ -144,7 +144,7 @@ async def run_seed():
                 password_hash=hash_password(DEFAULT_PASSWORD),
                 name="Cmdr. Torres",
                 phone="512-555-0102",
-                role="commander",
+                roles=["commander"],
                 status="on_duty",
                 qualifications=["dispatcher"],
                 medical_flags=[],
@@ -155,7 +155,7 @@ async def run_seed():
                 password_hash=hash_password(DEFAULT_PASSWORD),
                 name="Sarah Chen",
                 phone="512-555-0103",
-                role="worker",
+                roles=["worker"],
                 status="on_duty",
                 qualifications=["rn", "cpr", "first_aid"],
                 medical_flags=[],
@@ -166,7 +166,7 @@ async def run_seed():
                 password_hash=hash_password(DEFAULT_PASSWORD),
                 name="J. Williams",
                 phone="512-555-0104",
-                role="worker",
+                roles=["worker"],
                 status="on_duty",
                 qualifications=["cpr"],
                 medical_flags=[],
@@ -177,7 +177,7 @@ async def run_seed():
                 password_hash=hash_password(DEFAULT_PASSWORD),
                 name="K. Park",
                 phone="512-555-0105",
-                role="worker",
+                roles=["worker"],
                 status="on_duty",
                 qualifications=["cpr"],
                 medical_flags=[],
@@ -188,7 +188,7 @@ async def run_seed():
                 password_hash=hash_password(DEFAULT_PASSWORD),
                 name="D. Lee",
                 phone="512-555-0106",
-                role="worker",
+                roles=["worker"],
                 status="off_duty",
                 qualifications=[],
                 medical_flags=[],
@@ -199,7 +199,7 @@ async def run_seed():
                 password_hash=hash_password(DEFAULT_PASSWORD),
                 name="D. Park",
                 phone="512-555-0107",
-                role="supervisor",
+                roles=["supervisor"],
                 status="active",
                 qualifications=["auditor"],
                 medical_flags=[],
@@ -210,7 +210,7 @@ async def run_seed():
                 password_hash=hash_password(DEFAULT_PASSWORD),
                 name="Sunrise Org Admin",
                 phone="512-555-0100",
-                role="org_admin",
+                roles=["org_admin"],
                 status="active",
                 qualifications=[],
                 medical_flags=[],
@@ -440,10 +440,85 @@ async def run_seed():
         )
         db.add(sop_med)
 
+        sop_default = SOP(
+            org_id=org.id,
+            name="Default Emergency Response",
+            sop_code="SOP-GEN-001",
+            emergency_type="generic",
+            description=(
+                "Fallback protocol for emergency types without a dedicated SOP. "
+                "All decisions are made by the commander — no automated actions."
+            ),
+            steps=[
+                {
+                    "step": 1,
+                    "actor": "ai",
+                    "action": "alert_commander",
+                    "auto": True,
+                    "description": "Alert on-duty commander with incident details and location.",
+                    "target_time_sec": 5,
+                    "tier": None,
+                },
+                {
+                    "step": 2,
+                    "actor": "ai",
+                    "action": "retrieve_context",
+                    "auto": True,
+                    "description": "Retrieve facility risk flags and worker context.",
+                    "target_time_sec": 10,
+                    "tier": None,
+                },
+                {
+                    "step": 3,
+                    "actor": "commander",
+                    "action": "assess_situation",
+                    "auto": False,
+                    "description": "Commander reviews incident details and decides on appropriate response.",
+                    "target_time_sec": 60,
+                    "tier": "amber",
+                },
+                {
+                    "step": 4,
+                    "actor": "commander",
+                    "action": "contact_911",
+                    "auto": False,
+                    "description": "Commander decides whether to contact emergency services.",
+                    "target_time_sec": 90,
+                    "tier": "red",
+                },
+                {
+                    "step": 5,
+                    "actor": "commander",
+                    "action": "dispatch_responder",
+                    "auto": False,
+                    "description": "Commander decides whether to dispatch a responder.",
+                    "target_time_sec": 120,
+                    "tier": "amber",
+                },
+                {
+                    "step": 6,
+                    "actor": "commander",
+                    "action": "resolve_incident",
+                    "auto": False,
+                    "description": "Commander confirms situation resolved and closes incident.",
+                    "target_time_sec": None,
+                    "tier": "green",
+                },
+            ],
+            responder_checklist=[
+                {"step": 1, "text": "Acknowledge dispatch and confirm ETA"},
+                {"step": 2, "text": "Contact commander on arrival for situational briefing"},
+                {"step": 3, "text": "Follow commander instructions"},
+                {"step": 4, "text": "Complete incident report"},
+            ],
+            is_active=True,
+        )
+        db.add(sop_default)
+
         await db.commit()
         logger.info(
             f"Seed complete: org={org.id}, "
-            f"facilities=2, users={len(users)}, sops=2"
+            f"facilities=2, users={len(users)}, sops=3"
         )
         logger.info(f"Demo logins — password for all org users: '{DEFAULT_PASSWORD}'")
         logger.info(f"  {SUPER_ADMIN_EMAIL} (super_admin) password: superadmin123")

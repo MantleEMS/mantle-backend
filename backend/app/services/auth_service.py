@@ -24,8 +24,10 @@ def verify_password(plain: str, hashed: str) -> bool:
 MOBILE_ROLES = {"worker", "responder"}
 
 
-def create_access_token(user_id: str, role: str = "") -> str:
-    if role in MOBILE_ROLES:
+def create_access_token(user_id: str, roles: list = None) -> str:
+    if roles is None:
+        roles = []
+    if any(r in MOBILE_ROLES for r in roles):
         expire = datetime.now(timezone.utc) + timedelta(days=settings.MOBILE_ACCESS_TOKEN_EXPIRE_DAYS)
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)

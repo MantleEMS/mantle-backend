@@ -117,7 +117,7 @@ async def seed(db: AsyncSession):
         email=f"commander-{uuid.uuid4().hex[:6]}@test.com",
         password_hash=hash_password("testpass"),
         name="Test Commander",
-        role="commander",
+        roles=["commander"],
         status="on_duty",
         qualifications=[],
     )
@@ -126,7 +126,7 @@ async def seed(db: AsyncSession):
         email=f"worker-{uuid.uuid4().hex[:6]}@test.com",
         password_hash=hash_password("testpass"),
         name="Test Worker",
-        role="worker",
+        roles=["worker"],
         status="on_duty",
         qualifications=["rn", "cpr"],
         last_location={"lat": 30.27, "lng": -97.74},
