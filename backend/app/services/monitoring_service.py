@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -8,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import MonitoringSession, TelemetryEvent, IncidentEventLog
 from app.schemas.monitoring import TelemetryEventIn
 from app.services.thread_service import write_audit
+
+logger = logging.getLogger(__name__)
 
 
 async def start_session(
@@ -95,6 +98,10 @@ async def submit_telemetry(
     has_fall = False
 
     for ev in events:
+        logger.trace(  # type: ignore[attr-defined]
+            "Telemetry received: session=%s user=%s event_type=%s recorded_at=%s data=%s",
+            session.id, session.user_id, ev.event_type, ev.recorded_at, ev.data,
+        )
         records.append(
             TelemetryEvent(
                 session_id=session.id,
@@ -112,6 +119,9 @@ async def submit_telemetry(
 
     incident_id = None
     if has_fall and session.status == "active":
+        logger.trace(  # type: ignore[attr-defined]
+            "Fall detected — escalating session=%s user=%s to incident", session.id, session.user_id
+        )
         # Escalate: create an incident for the fall
         from app.services.incident_service import create_incident
 
@@ -169,6 +179,10 @@ async def submit_telemetry(
                 data={"original_event_type": te.event_type, **te.data},
                 recorded_at=te.recorded_at,
             ))
+            logger.trace(  # type: ignore[attr-defined]
+                "IncidentEventLog written: incident=%s user=%s event_type=telemetry_snapshot source=monitoring_escalation original_event_type=%s recorded_at=%s",
+                incident_id, session.user_id, te.event_type, te.recorded_at,
+            )
 
     await db.commit()
 

@@ -246,6 +246,9 @@ async def websocket_endpoint(
                 msg_type = msg.get("type")
 
                 if msg_type == "heartbeat":
+                    logger.trace(  # type: ignore[attr-defined]
+                        "WS heartbeat: incident=%s user=%s", incident_id, user_id_str
+                    )
                     # Refresh presence key with 30s TTL
                     await redis_setex(
                         f"presence:{incident_id}:{user_id_str}", 30, "1"
@@ -256,6 +259,10 @@ async def websocket_endpoint(
                     lat = msg.get("lat")
                     lng = msg.get("lng")
                     accuracy = msg.get("accuracy_m")
+                    logger.trace(  # type: ignore[attr-defined]
+                        "WS location received: incident=%s user=%s lat=%s lng=%s accuracy_m=%s",
+                        incident_id, user_id_str, lat, lng, accuracy,
+                    )
                     async with AsyncSessionLocal() as db:
                         participant_result = await db.execute(
                             select(Participant).where(
@@ -290,6 +297,10 @@ async def websocket_endpoint(
                                     data={"lat": lat, "lng": lng, "accuracy_m": accuracy},
                                     recorded_at=now,
                                 ))
+                                logger.trace(  # type: ignore[attr-defined]
+                                    "IncidentEventLog written: incident=%s user=%s event_type=participant.location source=incident_ws lat=%s lng=%s",
+                                    incident_id, user_id_str, lat, lng,
+                                )
                             await db.commit()
 
                     # Broadcast location event

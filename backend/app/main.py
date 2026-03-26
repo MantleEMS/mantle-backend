@@ -14,6 +14,18 @@ from app.redis_client import get_redis, close_redis, redis_zrangebyscore, redis_
 
 os.makedirs(settings.LOGS_DIR, exist_ok=True)
 
+# --- Custom TRACE level (below DEBUG=10) ---
+TRACE = 5
+logging.addLevelName(TRACE, "TRACE")
+
+
+def _trace(self: logging.Logger, message: str, *args, **kwargs):
+    if self.isEnabledFor(TRACE):
+        self._log(TRACE, message, args, **kwargs)  # type: ignore[arg-type]
+
+
+logging.Logger.trace = _trace  # type: ignore[attr-defined]
+
 _log_formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s — %(message)s")
 
 _file_handler = RotatingFileHandler(
@@ -28,6 +40,27 @@ _console_handler.setFormatter(_log_formatter)
 
 logging.basicConfig(level=logging.INFO, handlers=[_file_handler, _console_handler])
 logger = logging.getLogger(__name__)
+
+# --- Trace log file (only written when TRACE_ENABLED=true) ---
+if settings.TRACE_ENABLED:
+    _trace_handler = RotatingFileHandler(
+        os.path.join(settings.LOGS_DIR, "trace.log"),
+        maxBytes=50 * 1024 * 1024,  # 50 MB
+        backupCount=3,
+    )
+    _trace_handler.setFormatter(_log_formatter)
+    _trace_handler.setLevel(TRACE)
+
+    # Lower the root logger so TRACE records are created
+    logging.getLogger().setLevel(TRACE)
+
+    # Attach the trace handler only to the namespaces that emit trace events
+    for _trace_ns in ("app.routers.threads", "app.services.monitoring_service"):
+        _ns_logger = logging.getLogger(_trace_ns)
+        _ns_logger.addHandler(_trace_handler)
+        _ns_logger.setLevel(TRACE)
+
+    logger.info("TRACE logging enabled → %s/trace.log", settings.LOGS_DIR)
 
 # Route uvicorn loggers through our handlers so errors appear in app.log
 for _uvicorn_logger in ("uvicorn", "uvicorn.error", "uvicorn.access"):

@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     LLM_ADAPTIVE_SOP: bool = False             # allow LLM to propose step/SOP deviations
     LLM_NUM_CTX: int = 8192                    # context window size (tokens)
 
+    # Tracing
+    TRACE_ENABLED: bool = False                # set TRACE_ENABLED=true to emit TRACE-level logs
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
