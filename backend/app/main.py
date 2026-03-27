@@ -7,6 +7,7 @@ from logging.handlers import RotatingFileHandler
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.config import settings
 from app.database import AsyncSessionLocal
@@ -117,10 +118,14 @@ async def action_urgency_poller():
                                 await db.commit()
                                 await redis_zrem("action_urgency", action_id_str)
                                 logger.info(f"Action {action_id_str} expired after {age:.0f}s")
+                                from app.metrics import actions_expired
+                                actions_expired.inc()
                             elif age > ESCALATE_AFTER_SEC and action.tier == "green":
                                 action.tier = "amber"
                                 await db.commit()
                                 logger.info(f"Action {action_id_str} escalated green→amber")
+                                from app.metrics import actions_escalated
+                                actions_escalated.inc()
 
                         except Exception as e:
                             logger.error(f"Urgency poller error for {action_id_str}: {e}")
@@ -193,6 +198,10 @@ app.include_router(search.router)
 app.include_router(monitoring.router)
 app.include_router(logs.router)
 app.include_router(compliance.router)
+
+
+# --- Prometheus HTTP metrics + /metrics endpoint ---
+Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=True)
 
 
 @app.get("/health")

@@ -35,6 +35,16 @@ class ToolRegistry:
     def get_all(self) -> list[ToolDefinition]:
         return list(self._tools.values())
 
+    def get_subset(self, tool_names: list[str]) -> "ToolRegistry":
+        """Return a new registry containing only the named tools."""
+        subset = ToolRegistry()
+        for name in tool_names:
+            if name in self._tools:
+                subset._tools[name] = self._tools[name]
+            else:
+                logger.warning(f"get_subset: tool {name!r} not found in registry")
+        return subset
+
     async def execute(self, name: str, params: dict) -> dict:
         """Execute a tool by name. Opens its own DB session."""
         tool = self._tools.get(name)

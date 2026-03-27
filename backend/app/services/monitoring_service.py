@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import MonitoringSession, TelemetryEvent, IncidentEventLog
 from app.schemas.monitoring import TelemetryEventIn
 from app.services.thread_service import write_audit
+from app.metrics import monitoring_sessions_started, monitoring_escalations
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,8 @@ async def start_session(
     db.add(session)
     await db.commit()
     await db.refresh(session)
+
+    monitoring_sessions_started.inc()
 
     await write_audit(
         db=db,
@@ -149,6 +152,7 @@ async def submit_telemetry(
             patient_info={},
         )
         incident_id = incident.id
+        monitoring_escalations.inc()
         session.status = "escalated"
         session.end_reason = "escalated"
         session.ended_at = now

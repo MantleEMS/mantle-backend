@@ -833,10 +833,16 @@ function renderActions(actions, incidentId, incStatus) {
 
   if (incStatus !== 'resolved' && incStatus !== 'cancelled') {
     el.innerHTML += `
-      <button onclick="resolveCurrentIncident()"
-        class="w-full bg-green-600 text-white py-3 rounded-xl font-medium text-sm hover:bg-green-700 mt-2">
-        ✅ Resolve Incident
-      </button>
+      <div class="flex gap-2 mt-2">
+        <button onclick="resolveCurrentIncident()"
+          class="flex-1 bg-green-600 text-white py-3 rounded-xl font-medium text-sm hover:bg-green-700">
+          ✅ Resolve
+        </button>
+        <button onclick="cancelCurrentIncident()"
+          class="flex-1 bg-slate-500 text-white py-3 rounded-xl font-medium text-sm hover:bg-slate-600">
+          ✖ Cancel
+        </button>
+      </div>
     `;
   }
 }
@@ -881,6 +887,16 @@ async function resolveCurrentIncident() {
   if (!currentIncidentId) return;
   try {
     await api('POST', `/api/v1/incidents/${currentIncidentId}/resolve`, { resolution_note: 'Resolved via mobile' });
+    refreshIncidentData();
+  } catch (e) { alert(e.message); }
+}
+
+async function cancelCurrentIncident() {
+  if (!currentIncidentId) return;
+  const note = prompt('Cancellation reason (optional):');
+  if (note === null) return; // user dismissed
+  try {
+    await api('POST', `/api/v1/incidents/${currentIncidentId}/cancel`, { cancellation_note: note || 'Cancelled via mobile' });
     refreshIncidentData();
   } catch (e) { alert(e.message); }
 }

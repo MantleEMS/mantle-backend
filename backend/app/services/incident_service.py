@@ -8,6 +8,7 @@ from sqlalchemy import select, and_, func
 from app.models import Incident, Participant, Action, Message, SOP, User, Facility
 from app.services.thread_service import create_message, write_audit
 from app.notifications.push import send_push_to_commanders
+from app.metrics import incidents_created as incidents_created_metric, incidents_resolved as incidents_resolved_metric
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +131,8 @@ async def create_incident(
     await db.commit()
     await db.refresh(incident)
 
+    incidents_created_metric.labels(emergency_type=emergency_type, trigger_source=trigger_source).inc()
+
     logger.info(
         f"Incident {incident_number} created: id={incident.id}, type={emergency_type}, "
         f"org={org_id}, commander={'assigned' if commander else 'none'}, sop={'assigned' if sop else 'none'}"
@@ -216,6 +219,7 @@ async def resolve_incident(
     await db.commit()
     await db.refresh(incident)
 
+    incidents_resolved_metric.inc()
     logger.info(f"Incident {incident.incident_number} resolved by {resolved_by}")
 
     await create_message(
@@ -235,6 +239,42 @@ async def resolve_incident(
         actor_id=resolved_by,
         incident_id=incident.id,
         detail={"incident_number": incident.incident_number, "resolution_note": resolution_note},
+    )
+
+    return incident
+
+
+async def cancel_incident(
+    db: AsyncSession,
+    incident: Incident,
+    cancelled_by: UUID,
+    cancellation_note: str = None,
+) -> Incident:
+    incident.status = "cancelled"
+    incident.resolved_at = datetime.now(timezone.utc)
+    incident.resolved_by = cancelled_by
+    await db.commit()
+    await db.refresh(incident)
+
+    logger.info(f"Incident {incident.incident_number} cancelled by {cancelled_by}")
+
+    await create_message(
+        db=db,
+        incident_id=incident.id,
+        sender_type="system",
+        message_type="closure",
+        content=cancellation_note or f"Incident {incident.incident_number} cancelled.",
+        metadata={"event": "incident.cancelled", "cancelled_by": str(cancelled_by)},
+    )
+
+    await write_audit(
+        db=db,
+        org_id=incident.org_id,
+        event_type="incident.cancelled",
+        actor_type="human",
+        actor_id=cancelled_by,
+        incident_id=incident.id,
+        detail={"incident_number": incident.incident_number, "cancellation_note": cancellation_note},
     )
 
     return incident

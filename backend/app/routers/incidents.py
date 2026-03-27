@@ -11,12 +11,12 @@ from app.models import User, Incident
 
 logger = logging.getLogger(__name__)
 from app.schemas.incidents import (
-    TriggerIncidentRequest, ResolveIncidentRequest,
+    TriggerIncidentRequest, ResolveIncidentRequest, CancelIncidentRequest,
     IncidentOut, IncidentDetailOut, ParticipantOut,
 )
 from app.schemas.threads import MessageOut
 from app.schemas.actions import ActionOut
-from app.services.incident_service import create_incident, get_incident_detail, resolve_incident
+from app.services.incident_service import create_incident, get_incident_detail, resolve_incident, cancel_incident
 from app.agent.router import agent_router
 
 router = APIRouter(prefix="/api/v1/incidents", tags=["incidents"])
@@ -107,6 +107,42 @@ async def resolve(
     )
     logger.info(f"Incident {incident.incident_number} resolved by user {current_user.id}")
     return {"status": incident.status, "resolved_at": incident.resolved_at.isoformat()}
+
+
+@router.post("/{incident_id}/cancel")
+async def cancel(
+    incident_id: uuid.UUID,
+    body: CancelIncidentRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Incident).where(
+            and_(Incident.id == incident_id, Incident.org_id == current_user.org_id)
+        )
+    )
+    incident = result.scalar_one_or_none()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    if incident.status in ("resolved", "cancelled"):
+        logger.warning(f"Cancel rejected for incident {incident_id}: already in status '{incident.status}'")
+        raise HTTPException(status_code=400, detail="Incident already resolved or cancelled")
+
+    # Allow the initiator (worker) or anyone with responder/commander/admin role
+    user_roles = set(current_user.roles or [])
+    is_initiator = incident.initiated_by == current_user.id
+    is_authorized = is_initiator or user_roles & {"responder", "commander", "admin", "org_admin", "super_admin"}
+    if not is_authorized:
+        raise HTTPException(status_code=403, detail="Only the initiator or a responder/commander can cancel an incident")
+
+    incident = await cancel_incident(
+        db=db,
+        incident=incident,
+        cancelled_by=current_user.id,
+        cancellation_note=body.cancellation_note,
+    )
+    logger.info(f"Incident {incident.incident_number} cancelled by user {current_user.id}")
+    return {"status": incident.status, "cancelled_at": incident.resolved_at.isoformat()}
 
 
 @router.get("", response_model=list[IncidentOut])

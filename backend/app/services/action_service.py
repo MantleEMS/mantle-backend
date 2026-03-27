@@ -8,6 +8,7 @@ from sqlalchemy import select, and_
 from app.models import Action, Incident
 from app.redis_client import redis_zadd, redis_zrem, redis_publish
 from app.services.thread_service import create_message, write_audit
+from app.metrics import actions_created as actions_created_metric, actions_approved as actions_approved_metric, actions_rejected as actions_rejected_metric
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,7 @@ async def create_action(
     await db.commit()
     await db.refresh(action)
 
+    actions_created_metric.labels(tier=tier).inc()
     logger.info(f"Action {action.id} created: type={action_type}, tier={tier}, incident={incident_id}")
 
     # Add to Redis urgency sorted set (score = timestamp)
@@ -113,6 +115,7 @@ async def approve_action(
     action.executed_at = datetime.now(timezone.utc)
     await db.commit()
 
+    actions_approved_metric.inc()
     logger.info(f"Action {action.id} approved and executed by {approved_by} on incident {action.incident_id}")
     return action
 
@@ -164,5 +167,6 @@ async def reject_action(
         sender_id=rejected_by,
     )
 
+    actions_rejected_metric.inc()
     logger.info(f"Action {action.id} rejected by {rejected_by} on incident {action.incident_id} [reason={reason!r}]")
     return action

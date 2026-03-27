@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 from app.models import Message, AuditLog
 from app.redis_client import get_redis, redis_incr, redis_publish
+from app.metrics import messages_created as messages_created_metric
 
 
 def _msg_to_dict(msg: Message) -> dict:
@@ -46,6 +47,8 @@ async def create_message(
     db.add(msg)
     await db.commit()
     await db.refresh(msg)
+
+    messages_created_metric.labels(sender_type=sender_type).inc()
 
     # Publish to Redis for WebSocket broadcast
     event = {

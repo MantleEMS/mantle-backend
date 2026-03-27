@@ -31,6 +31,10 @@ class ResolveIncidentRequest(BaseModel):
     resolution_note: Optional[str] = None
 
 
+class CancelIncidentRequest(BaseModel):
+    cancellation_note: Optional[str] = None
+
+
 class ParticipantOut(BaseModel):
     id: UUID
     incident_id: UUID

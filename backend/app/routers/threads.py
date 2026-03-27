@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 import uuid
@@ -15,6 +15,7 @@ from app.models import User, Incident, Message, Participant, IncidentEventLog
 from app.schemas.threads import PostMessageRequest, MessageOut
 from app.services.thread_service import create_message, get_messages
 from app.redis_client import get_redis, redis_setex
+from app.metrics import ws_connections
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ router = APIRouter(prefix="/api/v1/incidents", tags=["threads"])
 async def post_message(
     incident_id: uuid.UUID,
     body: PostMessageRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -47,6 +49,17 @@ async def post_message(
         metadata=body.metadata or {},
         sender_id=current_user.id,
     )
+
+    # Invoke Thread Agent for human messages on active incidents
+    from app.agent.router import agent_router
+    if (
+        agent_router.thread_agent is not None
+        and incident.status in ("active", "triggered")
+    ):
+        background_tasks.add_task(
+            agent_router.thread_agent.on_message, incident_id, msg.id
+        )
+
     return msg
 
 
@@ -243,6 +256,7 @@ async def websocket_endpoint(
     channel = f"thread:{incident_id}"
     await pubsub.subscribe(channel)
 
+    ws_connections.inc()
     logger.info(f"WS connected: user={user_id_str} incident={incident_id}")
 
     async def receive_from_client():
@@ -375,6 +389,7 @@ async def websocket_endpoint(
     finally:
         await pubsub.unsubscribe(channel)
         await pubsub.aclose()
+        ws_connections.dec()
         logger.info(f"WS disconnected: user={user_id_str} incident={incident_id}")
 
 
