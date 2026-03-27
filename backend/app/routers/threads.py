@@ -124,6 +124,14 @@ async def websocket_docs(incident_id: uuid.UUID):
     {"type": "heartbeat"}
     ```
 
+    Arbitrary device telemetry (stored in audit log, not broadcast to other participants):
+    ```json
+    {"type": "telemetry", "event_type": "battery", "data": {"level": 0.84}}
+    {"type": "telemetry", "event_type": "wifi", "data": {"rssi": -72, "ssid": "HomeNetwork"}}
+    {"type": "telemetry", "event_type": "custom", "data": {"key": "value"}}
+    ```
+    `event_type` can be any string. Stored as `participant.telemetry.{event_type}` in `incident_event_log`.
+
     ---
     **Server → Client events**
 
@@ -312,6 +320,29 @@ async def websocket_endpoint(
                         "updated_at": datetime.utcnow().isoformat(),
                     })
                     await redis.publish(channel, location_event)
+
+                elif msg_type == "telemetry":
+                    # Arbitrary device telemetry (battery, wifi, etc.) — audit only, not broadcast
+                    event_type = msg.get("event_type", "custom")
+                    data = msg.get("data", {})
+                    async with AsyncSessionLocal() as db:
+                        incident_result = await db.execute(
+                            select(Incident).where(Incident.id == incident_id)
+                        )
+                        incident = incident_result.scalar_one_or_none()
+                        if incident:
+                            from datetime import timezone
+                            now = datetime.now(timezone.utc)
+                            db.add(IncidentEventLog(
+                                incident_id=incident_id,
+                                org_id=incident.org_id,
+                                user_id=uuid.UUID(user_id_str),
+                                event_type=f"participant.telemetry.{event_type}",
+                                source="incident_ws",
+                                data=data,
+                                recorded_at=now,
+                            ))
+                            await db.commit()
 
         except WebSocketDisconnect:
             pass

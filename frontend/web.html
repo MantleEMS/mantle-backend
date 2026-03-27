@@ -79,6 +79,12 @@
       <div onclick="showSection('search')" id="nav-search" class="sidebar-item text-gray-700 hover:bg-indigo-50 hover:text-indigo-700">
         🔎 Search
       </div>
+      <div onclick="showSection('logs')" id="nav-logs" class="sidebar-item text-gray-700 hover:bg-indigo-50 hover:text-indigo-700">
+        🗒️ Logs
+      </div>
+      <div onclick="showSection('compliance')" id="nav-compliance" class="sidebar-item text-gray-700 hover:bg-indigo-50 hover:text-indigo-700">
+        🛡️ Compliance
+      </div>
     </nav>
     <div class="px-2 mt-4">
       <button onclick="doLogout()"
@@ -270,6 +276,104 @@
       <div id="search-results"></div>
     </section>
 
+    <!-- LOGS -->
+    <section id="section-logs" class="hidden p-6">
+      <h2 class="text-xl font-semibold mb-4">Logs</h2>
+      <div class="flex flex-wrap gap-3 mb-4 items-end">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Log file</label>
+          <select id="log-file-select" class="border rounded-lg px-3 py-1.5 text-sm">
+            <option value="app">app.log</option>
+            <option value="trace">trace.log</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Lines</label>
+          <input id="log-lines" type="number" value="100" min="1" max="10000"
+            class="border rounded-lg px-3 py-1.5 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+        </div>
+        <button onclick="loadLogTail()"
+          class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
+          Tail
+        </button>
+        <button onclick="downloadLog()"
+          class="border border-indigo-600 text-indigo-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50">
+          Download
+        </button>
+      </div>
+      <div id="log-output" class="bg-gray-900 text-green-400 rounded-xl p-4 text-xs font-mono overflow-auto max-h-[65vh] whitespace-pre-wrap break-all">
+        <span class="text-gray-500">Select a log file and click Tail.</span>
+      </div>
+    </section>
+
+    <!-- COMPLIANCE -->
+    <section id="section-compliance" class="hidden p-6 max-w-4xl mx-auto">
+      <h2 class="text-xl font-semibold mb-1">OSHA Compliance Check</h2>
+      <p class="text-sm text-gray-500 mb-5">Paste your organization's SOP text and analyze it against OSHA requirements. No login required.</p>
+
+      <div class="bg-white rounded-xl border p-5 space-y-4 mb-6">
+        <div>
+          <label class="block text-sm font-medium mb-1">SOP Text <span class="text-red-500">*</span></label>
+          <textarea id="compliance-sop-text" rows="10" placeholder="Paste your Standard Operating Procedure text here..."
+            class="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-y"></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium mb-1">Industry / Context</label>
+            <input id="compliance-context" type="text" placeholder="e.g. home healthcare, construction"
+              value="home healthcare"
+              class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">OSHA Standards <span class="text-gray-400 font-normal">(optional, comma-separated)</span></label>
+            <input id="compliance-standards" type="text" placeholder="e.g. 29 CFR 1910.1030, 29 CFR 1910.132"
+              class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+          </div>
+        </div>
+        <div class="flex gap-3 items-center pt-1">
+          <button onclick="runComplianceCheck()"
+            class="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50"
+            id="compliance-btn">
+            Analyze SOP
+          </button>
+          <span id="compliance-status" class="text-sm text-gray-500"></span>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div id="compliance-results" class="hidden space-y-5">
+
+        <!-- Score + Summary -->
+        <div class="bg-white rounded-xl border p-5">
+          <div class="flex items-start gap-4">
+            <div id="compliance-score-circle"
+              class="shrink-0 w-20 h-20 rounded-full flex flex-col items-center justify-center text-white font-bold text-xl shadow">
+              <span id="compliance-score-val">—</span>
+              <span class="text-xs font-normal opacity-80">/ 100</span>
+            </div>
+            <div>
+              <div class="text-xs text-gray-400 mb-1 uppercase tracking-wide">Standards checked</div>
+              <div id="compliance-standards-checked" class="flex flex-wrap gap-1 mb-3"></div>
+              <p id="compliance-summary" class="text-sm text-gray-700 leading-relaxed"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Variances -->
+        <div>
+          <h3 class="text-base font-semibold mb-2">Variances <span id="compliance-variance-count" class="text-sm font-normal text-gray-500"></span></h3>
+          <div id="compliance-variances" class="space-y-3"></div>
+        </div>
+
+        <!-- Recommendations -->
+        <div>
+          <h3 class="text-base font-semibold mb-2">Recommendations <span id="compliance-rec-count" class="text-sm font-normal text-gray-500"></span></h3>
+          <div id="compliance-recommendations" class="space-y-3"></div>
+        </div>
+
+      </div>
+    </section>
+
   </main>
 </div>
 
@@ -284,6 +388,8 @@
 // ─── State ───────────────────────────────────────────────────────────────────
 let BASE_URL = 'http://localhost:8000';
 let token = null;
+let refreshToken = null;
+let tokenRefreshTimer = null;
 let currentUser = null;
 let currentSection = null;
 let auditPage = 1;
@@ -291,17 +397,58 @@ let ws = null;
 let wsIncidentId = null;
 let pollInterval = null;
 
+// ─── Token refresh ────────────────────────────────────────────────────────────
+async function doTokenRefresh() {
+  if (!refreshToken) return;
+  try {
+    const res = await fetch(`${BASE_URL}/api/v1/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    if (!res.ok) throw new Error('refresh failed');
+    const data = await res.json();
+    token = data.access_token;
+  } catch {
+    // Refresh token expired or invalid — force logout
+    doLogout();
+  }
+}
+
+function scheduleTokenRefresh() {
+  if (tokenRefreshTimer) clearInterval(tokenRefreshTimer);
+  // Access token expires in 15 min; refresh every 12 min to stay ahead
+  tokenRefreshTimer = setInterval(doTokenRefresh, 12 * 60 * 1000);
+}
+
+function stopTokenRefresh() {
+  if (tokenRefreshTimer) { clearInterval(tokenRefreshTimer); tokenRefreshTimer = null; }
+}
+
 // ─── API Client ──────────────────────────────────────────────────────────────
 async function api(method, path, body = null, isForm = false) {
   const headers = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
   if (body && !isForm) headers['Content-Type'] = 'application/json';
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  let res = await fetch(`${BASE_URL}${path}`, {
     method,
     headers,
     body: isForm ? body : (body ? JSON.stringify(body) : null),
   });
+
+  // On 401 attempt a token refresh once and retry
+  if (res.status === 401 && refreshToken) {
+    await doTokenRefresh();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      res = await fetch(`${BASE_URL}${path}`, {
+        method,
+        headers,
+        body: isForm ? body : (body ? JSON.stringify(body) : null),
+      });
+    }
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
@@ -321,7 +468,9 @@ async function doLogin() {
   try {
     const data = await api('POST', '/api/v1/auth/login', { email, password });
     token = data.access_token;
+    refreshToken = data.refresh_token;
     currentUser = data.user;
+    scheduleTokenRefresh();
     document.getElementById('user-info').textContent = `${currentUser.name} · ${currentUser.role}`;
     document.getElementById('screen-login').classList.add('hidden');
     document.getElementById('screen-app').classList.remove('hidden');
@@ -339,7 +488,9 @@ document.getElementById('login-password').addEventListener('keydown', e => {
 function doLogout() {
   disconnectWSWeb();
   stopPoll();
+  stopTokenRefresh();
   token = null;
+  refreshToken = null;
   currentUser = null;
   document.getElementById('screen-app').classList.add('hidden');
   document.getElementById('screen-login').classList.remove('hidden');
@@ -1099,6 +1250,53 @@ async function doSearch() {
   }
 }
 
+// ─── Logs ─────────────────────────────────────────────────────────────────────
+async function loadLogTail() {
+  const name = document.getElementById('log-file-select').value;
+  const lines = parseInt(document.getElementById('log-lines').value) || 100;
+  const el = document.getElementById('log-output');
+  el.textContent = 'Loading…';
+  try {
+    const res = await fetch(`${BASE_URL}/api/v1/logs/tail/${name}?lines=${lines}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || res.statusText);
+    }
+    const text = await res.text();
+    el.textContent = text || '(empty)';
+    el.scrollTop = el.scrollHeight;
+  } catch (e) {
+    el.innerHTML = `<span class="text-red-400">${e.message}</span>`;
+  }
+}
+
+function downloadLog() {
+  const name = document.getElementById('log-file-select').value;
+  const a = document.createElement('a');
+  a.href = `${BASE_URL}/api/v1/logs/download/${name}`;
+  a.setAttribute('download', `${name}.log`);
+  // Attach auth via a temporary fetch-blob approach
+  fetch(a.href, { headers: { Authorization: `Bearer ${token}` } })
+    .then(async res => {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || res.statusText);
+      }
+      return res.blob();
+    })
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      a.href = url;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    })
+    .catch(e => alert(`Download failed: ${e.message}`));
+}
+
 // ─── WebSocket (web admin) ────────────────────────────────────────────────────
 function connectWSWeb(incidentId) {
   if (ws) disconnectWSWeb();
@@ -1472,6 +1670,113 @@ async function createSOP() {
 document.getElementById('modal-overlay').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
 });
+
+// ─── OSHA Compliance Check ────────────────────────────────────────────────────
+async function runComplianceCheck() {
+  const sopText = document.getElementById('compliance-sop-text').value.trim();
+  if (!sopText) {
+    alert('Please paste your SOP text before analyzing.');
+    return;
+  }
+
+  const context = document.getElementById('compliance-context').value.trim() || 'general workplace';
+  const rawStandards = document.getElementById('compliance-standards').value.trim();
+  const oshaStandards = rawStandards
+    ? rawStandards.split(',').map(s => s.trim()).filter(Boolean)
+    : null;
+
+  const btn = document.getElementById('compliance-btn');
+  const status = document.getElementById('compliance-status');
+  btn.disabled = true;
+  status.textContent = 'Analyzing… this may take a moment.';
+  document.getElementById('compliance-results').classList.add('hidden');
+
+  try {
+    const res = await fetch(`${BASE_URL}/api/v1/compliance/sop-check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sop_text: sopText,
+        industry_context: context,
+        osha_standards: oshaStandards,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    renderComplianceResults(data);
+    status.textContent = 'Analysis complete.';
+  } catch (e) {
+    status.textContent = '';
+    alert(`Compliance check failed: ${e.message}`);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderComplianceResults(data) {
+  // Score circle
+  const score = data.compliance_score ?? 0;
+  const circle = document.getElementById('compliance-score-circle');
+  circle.className = 'shrink-0 w-20 h-20 rounded-full flex flex-col items-center justify-center text-white font-bold text-xl shadow';
+  if (score >= 80) circle.classList.add('bg-green-500');
+  else if (score >= 60) circle.classList.add('bg-yellow-500');
+  else if (score >= 40) circle.classList.add('bg-orange-500');
+  else circle.classList.add('bg-red-600');
+  document.getElementById('compliance-score-val').textContent = score;
+
+  // Summary
+  document.getElementById('compliance-summary').textContent = data.summary || '';
+
+  // Standards checked
+  const stdEl = document.getElementById('compliance-standards-checked');
+  stdEl.innerHTML = (data.osha_standards_checked || [])
+    .map(s => `<span class="badge bg-indigo-100 text-indigo-700">${escHtml(s)}</span>`)
+    .join('');
+
+  // Variances
+  const severityColor = { critical: 'bg-red-100 text-red-700', major: 'bg-orange-100 text-orange-700', minor: 'bg-yellow-100 text-yellow-700' };
+  const variances = data.variances || [];
+  document.getElementById('compliance-variance-count').textContent = `(${variances.length})`;
+  document.getElementById('compliance-variances').innerHTML = variances.length === 0
+    ? '<p class="text-sm text-gray-500">No variances found.</p>'
+    : variances.map(v => `
+      <div class="bg-white border rounded-xl p-4 space-y-1">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="font-mono text-xs font-semibold text-indigo-700">${escHtml(v.osha_reference)}</span>
+          <span class="badge ${severityColor[v.severity] || 'bg-gray-100 text-gray-600'}">${escHtml(v.severity)}</span>
+        </div>
+        <p class="text-sm font-medium text-gray-800">${escHtml(v.requirement)}</p>
+        <p class="text-xs text-gray-500"><span class="font-semibold">Current state:</span> ${escHtml(v.current_state)}</p>
+        <p class="text-xs text-gray-700 bg-red-50 rounded px-2 py-1">${escHtml(v.gap)}</p>
+      </div>`).join('');
+
+  // Recommendations
+  const priorityColor = { high: 'bg-red-100 text-red-700', medium: 'bg-yellow-100 text-yellow-700', low: 'bg-green-100 text-green-700' };
+  const recs = data.recommendations || [];
+  document.getElementById('compliance-rec-count').textContent = `(${recs.length})`;
+  document.getElementById('compliance-recommendations').innerHTML = recs.length === 0
+    ? '<p class="text-sm text-gray-500">No recommendations.</p>'
+    : recs.map(r => `
+      <div class="bg-white border rounded-xl p-4 space-y-1">
+        <div class="flex items-center gap-2">
+          <span class="badge ${priorityColor[r.priority] || 'bg-gray-100 text-gray-600'}">${escHtml(r.priority)} priority</span>
+        </div>
+        <p class="text-sm font-medium text-gray-800">${escHtml(r.action)}</p>
+        <p class="text-xs text-gray-500">${escHtml(r.rationale)}</p>
+        ${r.suggested_language ? `<pre class="text-xs bg-indigo-50 text-indigo-800 rounded p-2 mt-1">${escHtml(r.suggested_language)}</pre>` : ''}
+      </div>`).join('');
+
+  document.getElementById('compliance-results').classList.remove('hidden');
+}
+
+function escHtml(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 </script>
 </body>
 </html>

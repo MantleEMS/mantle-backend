@@ -181,7 +181,7 @@ app.add_middleware(
 )
 
 # --- Register routers ---
-from app.routers import auth, config, incidents, threads, actions, evidence, search, monitoring, logs
+from app.routers import auth, config, incidents, threads, actions, evidence, search, monitoring, logs, compliance
 
 app.include_router(auth.router)
 app.include_router(config.router)
@@ -192,6 +192,7 @@ app.include_router(evidence.router)
 app.include_router(search.router)
 app.include_router(monitoring.router)
 app.include_router(logs.router)
+app.include_router(compliance.router)
 
 
 @app.get("/health")
